@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JAMES AI — Powered by Claude</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090B;--s1:#0F0F12;--s2:#141417;--s3:#1A1A1F;--s4:#212128;
+  --b1:#2A2A35;--b2:#333340;--b3:#3D3D4E;
+  --t1:#F4F4F6;--t2:#B0B0C0;--t3:#6E6E88;--t4:#454560;
+  --acc:#7C6AF7;--acc2:#9B8BFF;--acc3:#5B4FD4;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;--cyan:#06B6D4;
+  --tg:#229ED9;--orange:#F97316;
+  --r8:8px;--r12:12px;--r16:16px;--r20:20px;--r999:999px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.4);
+  --shadow:0 4px 20px rgba(0,0,0,.5);
+  --shadow-lg:0 12px 48px rgba(0,0,0,.6);
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;background:var(--bg);color:var(--t1);overflow:hidden;-webkit-font-smoothing:antialiased}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.7}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes ripple{0%{transform:scale(0);opacity:.6}100%{transform:scale(4);opacity:0}}
+@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(124,106,247,.3)}50%{box-shadow:0 0 20px rgba(124,106,247,.6)}}
+@keyframes thinking{0%{opacity:.4;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}100%{opacity:.4;transform:translateY(0)}}
+#app{display:flex;height:100vh;position:relative;overflow:hidden}
+#sidebar{width:268px;min-width:268px;background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:20}
+#sidebar.collapsed{transform:translateX(-268px);position:absolute;height:100%}
+.sb-top{padding:14px 12px 10px;border-bottom:1px solid var(--b1)}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:4px 0 12px}
+.brand-logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--acc),var(--acc3));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;box-shadow:0 0 16px rgba(124,106,247,.4)}
+.brand-text{font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-.3px}
+.brand-ver{font-size:10px;color:var(--t3);font-weight:500;margin-top:1px}
+.new-btn{width:100%;padding:9px 12px;background:var(--s3);border:1px solid var(--b2);border-radius:var(--r12);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s}
+.new-btn:hover{background:var(--s4);border-color:var(--acc);color:var(--acc2)}
+.sb-section{padding:8px 12px 4px;font-size:10.5px;font-weight:700;color:var(--t4);letter-spacing:.08em;text-transform:uppercase}
+.chat-list{flex:1;overflow-y:auto;padding:4px 8px;scrollbar-width:thin;scrollbar-color:var(--b2) transparent}
+.chat-item{padding:8px 10px;border-radius:var(--r8);font-size:13px;color:var(--t3);cursor:pointer;margin-bottom:1px;transition:all .15s;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
+.chat-item:hover{background:var(--s3);color:var(--t2)}
+.chat-item.active{background:linear-gradient(90deg,rgba(124,106,247,.15),transparent);color:var(--t1);border-left:2px solid var(--acc)}
+.ci-del{display:none;position:absolute;right:8px;background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px}
+.chat-item:hover .ci-del{display:block}
+.sb-footer{padding:12px;border-top:1px solid var(--b1);display:flex;flex-direction:column;gap:8px}
+.proxy-pill{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s3);border:1px solid var(--b1);border-radius:var(--r8);font-size:11.5px;color:var(--t3);cursor:pointer;transition:border-color .2s}
+.proxy-pill:hover{border-color:var(--acc)}
+.proxy-dot{width:7px;height:7px;border-radius:50%;background:var(--t4);flex-shrink:0;transition:all .3s}
+.proxy-dot.ok{background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.5);animation:glow 2s infinite}
+.proxy-dot.fail{background:var(--red)}
+.sb-user{display:flex;align-items:center;gap:8px;padding:6px 8px}
+.sb-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
+.sb-uname{font-size:12.5px;font-weight:600;color:var(--t2)}
+.sb-utag{font-size:10.5px;color:var(--t4)}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--b1);background:var(--s1);flex-shrink:0}
+.tb-icon-btn{background:none;border:none;color:var(--t3);cursor:pointer;padding:6px;border-radius:var(--r8);display:flex;align-items:center;transition:all .2s}
+.tb-icon-btn:hover{color:var(--t1);background:var(--s3)}
+#model-trigger{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--s3);border:1px solid var(--b2);border-radius:var(--r12);cursor:pointer;color:var(--t1);font-size:13px;font-weight:500;transition:all .2s;position:relative}
+#model-trigger:hover{border-color:var(--acc);background:var(--s4)}
+.mt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.mt-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-tag{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:var(--r999);margin-left:2px}
+.mt-chevron{color:var(--t4);font-size:10px}
+.tb-spacer{flex:1}
+#mode-tabs{display:flex;gap:2px;background:var(--s3);border:1px solid var(--b1);border-radius:var(--r12);padding:3px}
+.mode-tab{padding:5px 11px;border-radius:var(--r8);font-size:12px;font-weight:600;border:none;background:none;color:var(--t3);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px}
+.mode-tab.active{background:var(--acc);color:#fff;box-shadow:0 2px 8px rgba(124,106,247,.4)}
+.mode-tab:hover:not(.active){color:var(--t1)}
+#model-menu{position:absolute;top:54px;left:76px;z-index:200;background:var(--s2);border:1px solid var(--b2);border-radius:var(--r16);padding:6px;min-width:300px;box-shadow:var(--shadow-lg);display:none;animation:fadeUp .18s ease}
+#model-menu.open{display:block}
+.mm-section{padding:6px 10px 4px;font-size:10px;font-weight:700;color:var(--t4);letter-spacing:.08em;text-transform:uppercase}
+.mm-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r12);cursor:pointer;transition:background .15s}
+.mm-item:hover{background:var(--s4)}
+.mm-item.active{background:rgba(124,106,247,.12);border:1px solid rgba(124,106,247,.2)}
+.mm-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.mm-info{flex:1}
+.mm-name{font-size:13px;font-weight:600;color:var(--t1)}
+.mm-desc{font-size:11px;color:var(--t3);margin-top:1px}
+.mm-badge{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:var(--r999)}
+#chat-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+#chat{flex:1;overflow-y:auto;padding:20px 16px 8px;scrollbar-width:thin;scrollbar-color:var(--b2) transparent}
+#chat::-webkit-scrollbar{width:4px}
+#chat::-webkit-scrollbar-thumb{background:var(--b2);border-radius:4px}
+#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:24px;animation:fadeUp .5s ease;padding:20px}
+#welcome.gone{display:none}
+.wc-logo{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--acc),var(--acc3));display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 40px rgba(124,106,247,.4);animation:pulse 3s ease-in-out infinite}
+.wc-title{font-size:28px;font-weight:800;letter-spacing:-.6px;color:var(--t1);text-align:center}
+.wc-sub{font-size:14px;color:var(--t3);text-align:center;max-width:400px;line-height:1.6}
+.caps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:520px;width:100%}
+.cap-card{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r12);padding:12px 14px;cursor:pointer;transition:all .2s;text-align:left}
+.cap-card:hover{border-color:var(--acc);background:var(--s3);transform:translateY(-2px)}
+.cap-icon{font-size:20px;margin-bottom:6px}
+.cap-title{font-size:12.5px;font-weight:600;color:var(--t2)}
+.cap-sub{font-size:11px;color:var(--t4);margin-top:2px;line-height:1.4}
+.msg{display:flex;gap:10px;margin-bottom:20px;animation:fadeUp .2s ease;max-width:860px;margin-left:auto;margin-right:auto;width:100%}
+.msg.user-msg{flex-direction:row-reverse}
+.msg-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;font-weight:700;margin-top:2px}
+.msg-avatar.ai-av{background:linear-gradient(135deg,var(--acc),var(--acc3));color:#fff;box-shadow:0 0 12px rgba(124,106,247,.3)}
+.msg-avatar.user-av{background:var(--s4);border:1px solid var(--b2);color:var(--t2)}
+.msg-content{display:flex;flex-direction:column;gap:4px;max-width:78%}
+.msg.user-msg .msg-content{align-items:flex-end}
+.msg-bubble{padding:12px 16px;border-radius:16px;font-size:14.5px;line-height:1.72}
+.ai-bubble{background:var(--s2);border:1px solid var(--b1)}
+.user-bubble{background:linear-gradient(135deg,var(--acc),var(--acc3));color:#fff;border-radius:16px 16px 4px 16px;box-shadow:0 4px 16px rgba(124,106,247,.3)}
+.msg-img{max-width:280px;border-radius:var(--r12);margin-bottom:8px;display:block;border:1px solid var(--b2)}
+.msg-meta{display:flex;align-items:center;gap:8px;padding:0 4px}
+.msg-time{font-size:10.5px;color:var(--t4)}
+.msg-model{font-size:10px;color:var(--t4);padding:1px 6px;background:var(--s3);border-radius:var(--r999);border:1px solid var(--b1)}
+.think-wrap{margin-bottom:10px}
+.think-header{display:flex;align-items:center;gap:7px;padding:6px 12px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:var(--r8);cursor:pointer;color:var(--amber);font-size:12px;font-weight:600;transition:background .2s;user-select:none}
+.think-header:hover{background:rgba(245,158,11,.12)}
+.think-dots{display:flex;gap:3px;align-items:center}
+.think-dots span{width:5px;height:5px;border-radius:50%;background:var(--amber);animation:thinking 1.2s ease-in-out infinite}
+.think-dots span:nth-child(2){animation-delay:.2s}
+.think-dots span:nth-child(3){animation-delay:.4s}
+.think-body{margin-top:4px;padding:10px 14px;background:rgba(245,158,11,.03);border:1px solid rgba(245,158,11,.1);border-radius:0 var(--r8) var(--r8) var(--r8);color:#9A8050;font-size:12px;line-height:1.7;white-space:pre-wrap;font-style:italic;max-height:200px;overflow-y:auto;scrollbar-width:none;transition:max-height .3s ease}
+.think-body.closed{max-height:0;overflow:hidden;border:none;padding:0}
+.code-block{border-radius:var(--r12);overflow:hidden;border:1px solid var(--b2);margin:10px 0;background:#0C0C10}
+.code-top{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--b2);flex-wrap:wrap;gap:6px}
+.code-lang-badge{font-size:11.5px;font-weight:700;font-family:monospace;color:var(--acc2);display:flex;align-items:center;gap:5px}
+.code-dot{width:5px;height:5px;border-radius:50%;background:var(--acc2)}
+.code-btns{display:flex;gap:5px;flex-wrap:wrap}
+.c-btn{padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;background:var(--s4);color:var(--t2)}
+.c-btn:hover{background:var(--b2);color:var(--t1)}
+.c-btn.preview{background:rgba(59,130,246,.2);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.c-btn.preview:hover{background:rgba(59,130,246,.35)}
+.c-btn.copied{background:rgba(34,197,94,.2);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+pre.code-pre{margin:0;padding:16px;overflow-x:auto;font-size:12.5px;line-height:1.7;color:#CBD5E1;font-family:"SF Mono","Fira Code","Cascadia Code",monospace;white-space:pre}
+.bubble-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.ba-btn{display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--b2);border-radius:var(--r999);padding:4px 11px;color:var(--t3);font-size:11.5px;cursor:pointer;transition:all .2s}
+.ba-btn:hover{border-color:var(--acc);color:var(--acc2)}
+.cursor{display:inline-block;width:2px;height:16px;background:var(--acc2);vertical-align:middle;margin-left:1px;border-radius:1px;animation:blink .7s infinite}
+#input-area{padding:12px 16px 14px;border-top:1px solid var(--b1);background:var(--s1);flex-shrink:0}
+#pending-img-bar{margin-bottom:8px;display:none}
+.pimg-wrap{display:inline-flex;align-items:center;gap:8px;background:var(--s3);border:1px solid var(--b2);border-radius:var(--r8);padding:6px 10px}
+.pimg-thumb{width:38px;height:38px;border-radius:6px;object-fit:cover;border:1px solid var(--b2)}
+.pimg-name{font-size:12px;color:var(--t2)}
+.pimg-rm{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 4px;border-radius:4px}
+.input-shell{display:flex;flex-direction:column;background:var(--s2);border:1.5px solid var(--b2);border-radius:18px;transition:border-color .2s;overflow:hidden}
+.input-shell:focus-within{border-color:var(--acc)}
+.input-top{display:flex;align-items:flex-end;gap:6px;padding:10px 12px 6px}
+#txt{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:14.5px;line-height:1.55;resize:none;max-height:180px;font-family:inherit;padding:2px 0;scrollbar-width:none}
+#txt::placeholder{color:var(--t4)}
+.i-btn{background:none;border:none;color:var(--t3);cursor:pointer;padding:5px;display:flex;align-items:center;border-radius:var(--r8);transition:all .2s;flex-shrink:0}
+.i-btn:hover{color:var(--t1);background:var(--b1)}
+.i-btn.active{color:var(--red)}
+.input-bottom{display:flex;align-items:center;justify-content:space-between;padding:6px 12px 10px;border-top:1px solid var(--b1)}
+.ib-left{display:flex;align-items:center;gap:4px}
+.ib-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--s3);border:1px solid var(--b1);border-radius:var(--r999);font-size:11px;color:var(--t3);cursor:pointer;transition:all .2s}
+.ib-pill:hover{border-color:var(--acc);color:var(--acc2)}
+.ib-pill.active{border-color:var(--amber);color:var(--amber);background:rgba(245,158,11,.08)}
+.send-btn{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc3));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 2px 10px rgba(124,106,247,.4)}
+.send-btn:hover{transform:scale(1.05);box-shadow:0 4px 16px rgba(124,106,247,.5)}
+.send-btn.stop-mode{background:linear-gradient(135deg,var(--red),#c0392b)}
+.ib-hint{font-size:10.5px;color:var(--t4);text-align:center;margin-top:8px}
+#tg-panel{position:absolute;bottom:0;left:0;right:0;top:0;background:var(--bg);display:none;flex-direction:column;overflow:hidden;z-index:5}
+#tg-panel.open{display:flex}
+.tg-header{padding:14px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:12px;background:var(--s1);flex-shrink:0}
+.tg-icon{width:38px;height:38px;border-radius:12px;background:var(--tg);display:flex;align-items:center;justify-content:center;font-size:18px}
+.tg-header-text h2{font-size:15px;font-weight:700;color:var(--t1)}
+.tg-header-text p{font-size:12px;color:var(--t3)}
+.tg-close{margin-left:auto;background:none;border:none;color:var(--t3);cursor:pointer;padding:6px;border-radius:var(--r8);transition:all .2s}
+.tg-close:hover{color:var(--t1);background:var(--s3)}
+.tg-body{flex:1;overflow-y:auto;padding:16px;scrollbar-width:thin;scrollbar-color:var(--b2) transparent}
+.tg-templates{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px}
+.tg-tpl{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r12);padding:14px;cursor:pointer;transition:all .2s}
+.tg-tpl:hover{border-color:var(--tg);background:var(--s3);transform:translateY(-2px)}
+.tg-tpl .ti{font-size:24px;margin-bottom:8px}
+.tg-tpl .tn{font-size:13px;font-weight:600;color:var(--t1)}
+.tg-tpl .td{font-size:11.5px;color:var(--t3);margin-top:3px;line-height:1.4}
+.tg-custom{margin-top:12px}
+.tg-custom textarea{width:100%;background:var(--s2);border:1.5px solid var(--b2);border-radius:var(--r12);color:var(--t1);font-size:13.5px;padding:12px 14px;resize:none;outline:none;font-family:inherit;line-height:1.6;transition:border-color .2s}
+.tg-custom textarea:focus{border-color:var(--tg)}
+.tg-gen-btn{margin-top:10px;padding:10px 20px;background:linear-gradient(135deg,var(--tg),#1a7aaa);border:none;border-radius:var(--r12);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px}
+.tg-gen-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(34,158,217,.35)}
+#html-modal{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.9);display:none;flex-direction:column}
+#html-modal.open{display:flex}
+.hm-top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--s1);border-bottom:1px solid var(--b1);flex-shrink:0}
+.hm-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px}
+.hm-actions{display:flex;gap:8px}
+.hm-btn{padding:6px 14px;border:none;border-radius:var(--r8);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;background:var(--s3);color:var(--t1)}
+.hm-btn.dl{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.hm-btn.cls{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+#html-frame{flex:1;border:none;background:#fff}
+#setup-modal{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center}
+#setup-modal.open{display:flex}
+.setup-card{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r20);padding:28px;max-width:440px;width:90%;box-shadow:var(--shadow-lg);animation:fadeUp .2s ease}
+.setup-card h2{font-size:16px;font-weight:700;margin-bottom:6px;color:var(--t1);display:flex;align-items:center;gap:8px}
+.setup-card p{font-size:13px;color:var(--t2);line-height:1.65;margin-bottom:14px}
+.cmd-box{background:var(--bg);border:1px solid var(--b2);border-radius:var(--r8);padding:10px 14px;font-family:monospace;font-size:13px;color:var(--green);margin-bottom:14px;word-break:break-all;position:relative;cursor:pointer;transition:border-color .2s}
+.cmd-box:hover{border-color:var(--green)}
+.setup-close{padding:10px 22px;background:linear-gradient(135deg,var(--acc),var(--acc3));border:none;border-radius:var(--r12);color:#fff;font-weight:700;font-size:13px;cursor:pointer;transition:all .2s}
+.setup-close:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(124,106,247,.4)}
+.setup-link{color:var(--blue);text-decoration:none;border-bottom:1px solid rgba(59,130,246,.3)}
+@media(max-width:700px){
+  #sidebar{position:absolute;height:100%;left:0;transform:translateX(-268px)}
+  #sidebar.open{transform:translateX(0)}
+  .caps-grid{grid-template-columns:repeat(2,1fr)}
+  .tg-templates{grid-template-columns:1fr 1fr}
+  #mode-tabs{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="sidebar">
+  <div class="sb-top">
+    <div class="sb-brand">
+      <div class="brand-logo">J</div>
+      <div>
+        <div class="brand-text">JAMES AI</div>
+        <div class="brand-ver">v2.0 · Claude Powered</div>
+      </div>
+    </div>
+    <button class="new-btn" onclick="newChat()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      নতুন Conversation
+    </button>
+  </div>
+  <div class="sb-section">History</div>
+  <div class="chat-list" id="chat-list"></div>
+  <div class="sb-footer">
+    <div class="proxy-pill" onclick="openSetup()">
+      <div class="proxy-dot" id="proxy-dot"></div>
+      <span id="proxy-label">Proxy পরীক্ষা হচ্ছে…</span>
+    </div>
+    <div class="sb-user">
+      <div class="sb-avatar">J</div>
+      <div>
+        <div class="sb-uname">James</div>
+        <div class="sb-utag">JAMES AI Owner</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="main">
+  <div id="topbar">
+    <button class="tb-icon-btn" onclick="toggleSidebar()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="15" y2="12"/></svg>
+    </button>
+    <div id="model-trigger" onclick="toggleModelMenu()">
+      <div class="mt-dot" id="mt-dot"></div>
+      <span class="mt-name" id="mt-name">লোড হচ্ছে…</span>
+      <span class="mt-tag" id="mt-tag"></span>
+      <span class="mt-chevron">▾</span>
+    </div>
+    <div id="model-menu"></div>
+    <div class="tb-spacer"></div>
+    <div id="mode-tabs">
+      <button class="mode-tab active" onclick="setMode('chat')" id="tab-chat">💬 Chat</button>
+      <button class="mode-tab" onclick="setMode('telegram')" id="tab-telegram">✈️ Telegram</button>
+    </div>
+    <button class="tb-icon-btn" onclick="openSetup()" style="margin-left:6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    </button>
+  </div>
+  <div id="chat-wrap">
+    <div id="chat">
+      <div id="welcome">
+        <div class="wc-logo">🤖</div>
+        <div>
+          <div class="wc-title">আমি JAMES AI</div>
+          <div class="wc-sub" style="margin-top:8px">Claude-powered · Thinking mode · Voice · Vision · Telegram Bot Builder<br>যেকোনো প্রশ্ন করো, যেকোনো কোড বানাও</div>
+        </div>
+        <div class="caps-grid" id="caps-grid"></div>
+      </div>
+    </div>
+    <div id="tg-panel">
+      <div class="tg-header">
+        <div class="tg-icon">✈️</div>
+        <div class="tg-header-text">
+          <h2>Telegram Bot Builder</h2>
+          <p>Professional bot তৈরি করো AI দিয়ে</p>
+        </div>
+        <button class="tg-close" onclick="setMode('chat')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="tg-body">
+        <div class="sb-section" style="padding:0 0 10px">Templates</div>
+        <div class="tg-templates" id="tg-templates"></div>
+        <div class="tg-custom">
+          <div class="sb-section" style="padding:0 0 10px">Custom Bot</div>
+          <textarea id="tg-prompt" rows="4" placeholder="যেমন: একটা crypto price tracker bot বানাও…"></textarea>
+          <button class="tg-gen-btn" onclick="generateTgBot()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
+            Bot Code Generate করো
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="input-area">
+    <div id="pending-img-bar"></div>
+    <div class="input-shell">
+      <div class="input-top">
+        <button class="i-btn" onclick="document.getElementById('file-inp').click()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <button class="i-btn" id="mic-btn" onclick="toggleVoice()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <textarea id="txt" placeholder="JAMES-কে যা খুশি জিজ্ঞেস করো… (Shift+Enter = new line)" rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="handleSend()">
+          <svg id="send-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        </button>
+      </div>
+      <div class="input-bottom">
+        <div class="ib-left">
+          <button class="ib-pill" id="think-toggle" onclick="toggleThinkMode()">🧠 Thinking</button>
+          <button class="ib-pill" onclick="setMode('telegram')">✈️ Telegram Bot</button>
+        </div>
+        <span style="font-size:10.5px;color:var(--t4)">Enter ↵ = পাঠাও</span>
+      </div>
+    </div>
+    <div class="ib-hint">JAMES AI · Claude Sonnet 4.6 (built-in) + Free proxy models · <span id="char-count">0</span> chars</div>
+  </div>
+</div>
+</div>
+<div id="html-modal">
+  <div class="hm-top">
+    <div class="hm-title">🌐 HTML Preview</div>
+    <div class="hm-actions">
+      <button class="hm-btn dl" onclick="downloadCurrentHtml()">⬇ Download</button>
+      <button class="hm-btn cls" onclick="closeHtmlModal()">✕ Close</button>
+    </div>
+  </div>
+  <iframe id="html-frame" sandbox="allow-scripts allow-same-origin" title="preview"></iframe>
+</div>
+<div id="setup-modal">
+  <div class="setup-card">
+    <h2>🔧 Free Proxy Setup</h2>
+    <p>Free Claude মডেলগুলো ব্যবহার করতে local proxy চালু করো:</p>
+    <div class="cmd-box" onclick="copyCmd(this)">git clone https://github.com/bigdata2211it-web/ai-freemodel-cc-proxy && cd ai-freemodel-cc-proxy && npm start</div>
+    <p>FreeModel API key দরকার: <a href="https://freemodel.dev" target="_blank" class="setup-link">freemodel.dev</a> থেকে নাও (free).<br><br>
+    Proxy URL: <code style="font-size:12px;color:var(--green);font-family:monospace">http://localhost:11440</code></p>
+    <p style="font-size:12px;color:var(--t3);margin-top:8px">Claude Sonnet 4.6 সবসময় কাজ করবে — proxy ছাড়াও।</p>
+    <button class="setup-close" onclick="closeSetup()">বুঝলাম ✓</button>
+  </div>
+</div>
+<input type="file" id="file-inp" accept="image/*" style="display:none" onchange="handleImage(event)"/>
+<script>
+const PROXY_URL="http://localhost:11440";
+const BUILTIN_URL="https://api.anthropic.com/v1/messages";
+const BUILTIN_MODEL_ID="claude-sonnet-4-6";
+const MODELS=[
+  {id:"claude-sonnet-4-6",name:"Sonnet 4.6",shortName:"Sonnet 4.6",tag:"BUILT-IN",tagColor:"#7C6AF7",dot:"#7C6AF7",api:"builtin",desc:"সবসময় কাজ করে · Vision ✓ · No proxy needed"},
+  {id:"claude-opus-4-8",name:"Opus 4.8",shortName:"Opus 4.8",tag:"FREE",tagColor:"#F97316",dot:"#F97316",api:"proxy",desc:"সবচেয়ে শক্তিশালী · 1M ctx · Thinking · Proxy"},
+  {id:"claude-opus-4-7",name:"Opus 4.7",shortName:"Opus 4.7",tag:"FREE",tagColor:"#F59E0B",dot:"#F59E0B",api:"proxy",desc:"অত্যন্ত শক্তিশালী · Thinking · Proxy"},
+  {id:"claude-opus-4-6",name:"Opus 4.6",shortName:"Opus 4.6",tag:"FREE",tagColor:"#FB923C",dot:"#FB923C",api:"proxy",desc:"শক্তিশালী · 200K ctx · Proxy"},
+  {id:"claude-haiku-4-5-20251001",name:"Haiku 4.5",shortName:"Haiku 4.5",tag:"FREE",tagColor:"#22C55E",dot:"#22C55E",api:"proxy",desc:"দ্রুততম · 200K ctx · Proxy"},
+];
+const SYS=`তুমি JAMES AI — সবচেয়ে শক্তিশালী ও বিশ্বস্ত AI assistant।
+
+তুমি Claude-এর মতো অত্যন্ত capable:
+• যেকোনো বিষয়ে গভীর বিশ্লেষণ, প্রশ্নের উত্তর, পরামর্শ
+• ছবি দেখে সম্পূর্ণ বিশ্লেষণ (Vision)
+• গল্প, কবিতা, সৃজনশীল লেখা
+• বিজ্ঞান, গণিত, দর্শন, ইতিহাস
+• Telegram Bot — pyrogram/aiogram/python-telegram-bot দিয়ে professional
+• Website — সম্পূর্ণ HTML+CSS+JS single file
+• Python, JavaScript, TypeScript, React, PHP, SQL
+• Code debug, optimize, explain, review
+
+কোড নিয়ম:
+1. COMPLETE, WORKING, PRODUCTION-READY code দাও সবসময়
+2. \`\`\`html \`\`\`python \`\`\`javascript ব্লক ব্যবহার করো
+3. Telegram bot → সব handlers, error handling, inline keyboard, .env, README সহ
+4. Placeholder নয় — সম্পূর্ণ implementation
+
+James যে ভাষায় কথা বলে সেই ভাষায় উত্তর দাও। বন্ধুসুলভ, direct, সহায়ক।`;
+const TG_TEMPLATES=[
+  {icon:"🤖",name:"Echo Bot",desc:"সব message echo করে",prompt:"একটা Telegram echo bot বানাও python-telegram-bot দিয়ে। /start, echo handler, production code।"},
+  {icon:"💰",name:"Crypto Price Bot",desc:"Real-time crypto tracker",prompt:"Telegram crypto price bot বানাও। /price BTC দিলে CoinGecko থেকে real-time price। /alert এ notify। Inline keyboard সহ।"},
+  {icon:"📢",name:"Broadcast Bot",desc:"Admin broadcast system",prompt:"Telegram broadcast bot বানাও। Admin /broadcast দিলে সব subscriber পাবে। /subscribe /unsubscribe, database, admin panel।"},
+  {icon:"🎮",name:"Quiz Bot",desc:"Interactive quiz game",prompt:"Telegram quiz bot বানাও। Multiple choice, score, leaderboard, inline keyboard, timer সহ।"},
+  {icon:"📁",name:"File Manager Bot",desc:"Cloud storage + share",prompt:"Telegram file manager bot। Files upload/download/share। /upload /download /list /delete commands।"},
+  {icon:"🛒",name:"Shop Bot",desc:"E-commerce catalog",prompt:"Telegram e-commerce bot pyrogram দিয়ে। Product catalog, cart, checkout, order tracking, admin panel।"},
+  {icon:"🤖",name:"AI Chatbot",desc:"GPT-powered smart bot",prompt:"Telegram AI chatbot। OpenAI API দিয়ে smart replies, context memory, /reset, /mode।"},
+  {icon:"📊",name:"Analytics Bot",desc:"Channel/group stats",prompt:"Telegram analytics bot। Stats track, member count, active hours, top users, daily report।"},
+];
+const CAPS=[
+  {icon:"✈️",title:"Telegram Bot",sub:"Professional bot তৈরি করো",text:"আমাকে একটা advanced Telegram bot বানিয়ে দাও। Inline keyboard, database, admin panel সহ।"},
+  {icon:"🌐",title:"Website",sub:"Modern HTML+CSS+JS",text:"একটা modern, responsive, glassmorphism website বানাও। Dark mode, animations সহ।"},
+  {icon:"📸",title:"Image Analysis",sub:"Screenshot analyze করো",text:"ছবি upload করো — আমি সম্পূর্ণ বিশ্লেষণ করব।"},
+  {icon:"🐍",title:"Python Code",sub:"Script / automation",text:"একটা useful Python automation script লিখে দাও।"},
+  {icon:"🧠",title:"Deep Think",sub:"Complex problem solve",text:"একটা কঠিন সমস্যা নিয়ে আলোচনা করো। Thinking mode চালু রাখো।"},
+  {icon:"💡",title:"Explain",sub:"যেকোনো বিষয় বোঝাও",text:"Machine Learning কীভাবে কাজ করে সহজ ভাষায় বোঝাও।"},
+];
+let curModel=MODELS[0],msgs=[],history=[],loading=false,pendingImg=null;
+let listening=false,thinkMode=false,proxyOk=null,curHtml="",abortCtrl=null,recog=null,curMode="chat";
+let chats=[{id:1,title:"নতুন Chat",msgs:[],history:[]}],activeId=1;
+window.addEventListener("DOMContentLoaded",()=>{
+  buildModelMenu();buildCaps();buildTgTemplates();renderChatList();updateModelUI();
+  checkProxy();setInterval(checkProxy,30000);
+  document.getElementById("txt").addEventListener("input",()=>{
+    document.getElementById("char-count").textContent=document.getElementById("txt").value.length;
+  });
+});
+function setMode(m){
+  curMode=m;
+  document.getElementById("tab-chat").classList.toggle("active",m==="chat");
+  document.getElementById("tab-telegram").classList.toggle("active",m==="telegram");
+  document.getElementById("tg-panel").classList.toggle("open",m==="telegram");
+}
+function buildModelMenu(){
+  const menu=document.getElementById("model-menu");
+  menu.innerHTML='<div class="mm-section">Built-in</div>'+
+    MODELS.filter(m=>m.api==="builtin").map(mmItem).join("")+
+    '<div class="mm-section" style="margin-top:4px">Free via Proxy (freemodel.dev)</div>'+
+    MODELS.filter(m=>m.api==="proxy").map(mmItem).join("");
+}
+function mmItem(m){
+  return`<div class="mm-item ${m.id===curModel.id?'active':''}" onclick="selectModel('${m.id}')">
+    <div class="mm-dot" style="background:${m.dot}"></div>
+    <div class="mm-info"><div class="mm-name">${m.name}</div><div class="mm-desc">${m.desc}</div></div>
+    <span class="mm-badge" style="background:${m.tagColor}20;color:${m.tagColor};border:1px solid ${m.tagColor}40">${m.tag}</span>
+  </div>`;
+}
+function selectModel(id){curModel=MODELS.find(m=>m.id===id);buildModelMenu();updateModelUI();toggleModelMenu();}
+function updateModelUI(){
+  document.getElementById("mt-dot").style.background=curModel.dot;
+  document.getElementById("mt-name").textContent=curModel.shortName;
+  const tag=document.getElementById("mt-tag");
+  tag.textContent=curModel.tag;
+  tag.style.background=curModel.tagColor+"20";
+  tag.style.color=curModel.tagColor;
+  tag.style.border=`1px solid ${curModel.tagColor}40`;
+}
+function toggleModelMenu(){document.getElementById("model-menu").classList.toggle("open");}
+document.addEventListener("click",e=>{
+  if(!e.target.closest("#model-trigger")&&!e.target.closest("#model-menu"))
+    document.getElementById("model-menu").classList.remove("open");
+});
+async function checkProxy(){
+  try{
+    await fetch(PROXY_URL+"/v1/models",{headers:{"x-api-key":"james-ai"},signal:AbortSignal.timeout(3000)});
+    proxyOk=true;
+  }catch{proxyOk=false;}
+  const dot=document.getElementById("proxy-dot"),label=document.getElementById("proxy-label");
+  if(proxyOk){dot.className="proxy-dot ok";label.textContent="Free Proxy সক্রিয় ✓";}
+  else{dot.className="proxy-dot fail";label.textContent="Proxy বন্ধ — ক্লিক করো";}
+}
+function toggleSidebar(){
+  const sb=document.getElementById("sidebar");
+  if(window.innerWidth<=700){sb.classList.toggle("open");}
+  else{sb.classList.toggle("collapsed");}
+}
+function renderChatList(){
+  document.getElementById("chat-list").innerHTML=chats.map(c=>`
+    <div class="chat-item ${c.id===activeId?'active':''}" onclick="switchChat(${c.id})">
+      <span class="ci-icon">💬</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${c.title}</span>
+      <button class="ci-del" onclick="deleteChat(event,${c.id})">🗑</button>
+    </div>`).join("");
+}
+function newChat(){
+  const c=chats.find(x=>x.id===activeId);if(c){c.msgs=[...msgs];c.history=[...history];}
+  const id=Date.now();chats.unshift({id,title:"নতুন Chat",msgs:[],history:[]});
+  activeId=id;msgs=[];history=[];renderChatList();renderAll();
+}
+function switchChat(id){
+  const c=chats.find(x=>x.id===activeId);if(c){c.msgs=[...msgs];c.history=[...history];}
+  activeId=id;const nc=chats.find(x=>x.id===id);
+  msgs=nc?[...nc.msgs]:[];history=nc?[...nc.history]:[];
+  renderChatList();renderAll();
+}
+function deleteChat(e,id){
+  e.stopPropagation();chats=chats.filter(c=>c.id!==id);
+  if(activeId===id){if(chats.length===0)newChat();else switchChat(chats[0].id);}
+  else renderChatList();
+}
+function buildCaps(){
+  document.getElementById("caps-grid").innerHTML=CAPS.map(c=>`
+    <div class="cap-card" onclick="quickSend(${JSON.stringify(c.text)})">
+      <div class="cap-icon">${c.icon}</div>
+      <div class="cap-title">${c.title}</div>
+      <div class="cap-sub">${c.sub}</div>
+    </div>`).join("");
+}
+function buildTgTemplates(){
+  document.getElementById("tg-templates").innerHTML=TG_TEMPLATES.map(t=>`
+    <div class="tg-tpl" onclick="useTgTemplate(${JSON.stringify(t.prompt)})">
+      <div class="ti">${t.icon}</div><div class="tn">${t.name}</div><div class="td">${t.desc}</div>
+    </div>`).join("");
+}
+function useTgTemplate(p){setMode("chat");document.getElementById("txt").value=p;autoResize(document.getElementById("txt"));handleSend();}
+function generateTgBot(){
+  const p=document.getElementById("tg-prompt").value.trim();
+  if(!p){alert("Bot-এর description লিখো!");return;}
+  setMode("chat");
+  document.getElementById("txt").value="Telegram bot বানাও: "+p+"\n\nComplete production-ready Python code দাও।";
+  autoResize(document.getElementById("txt"));handleSend();
+}
+function quickSend(t){document.getElementById("txt").value=t;autoResize(document.getElementById("txt"));handleSend();}
+function toggleThinkMode(){
+  thinkMode=!thinkMode;
+  const btn=document.getElementById("think-toggle");
+  btn.classList.toggle("active",thinkMode);
+  btn.textContent=thinkMode?"🧠 Thinking ON":"🧠 Thinking";
+}
+function handleImage(e){
+  const file=e.target.files?.[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const du=ev.target.result;
+    pendingImg={base64:du.split(",")[1],mediaType:file.type||"image/jpeg",preview:du,name:file.name};
+    renderPendingImg();
+  };
+  reader.readAsDataURL(file);e.target.value="";
+}
+function renderPendingImg(){
+  const bar=document.getElementById("pending-img-bar");
+  if(!pendingImg){bar.style.display="none";bar.innerHTML="";return;}
+  bar.style.display="block";
+  bar.innerHTML=`<div class="pimg-wrap">
+    <img class="pimg-thumb" src="${pendingImg.preview}"/>
+    <span class="pimg-name">${pendingImg.name||"image"}</span>
+    <button class="pimg-rm" onclick="removePending()">✕</button>
+  </div>`;
+}
+function removePending(){pendingImg=null;renderPendingImg();}
+function toggleVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert("Voice input-এর জন্য Chrome ব্যবহার করুন।");return;}
+  if(listening){recog?.stop();listening=false;updateMicUI();return;}
+  recog=new SR();recog.continuous=false;recog.interimResults=false;recog.lang="bn-BD";
+  recog.onresult=e=>{document.getElementById("txt").value+=e.results[0][0].transcript;autoResize(document.getElementById("txt"));listening=false;updateMicUI();};
+  recog.onerror=recog.onend=()=>{listening=false;updateMicUI();};
+  recog.start();listening=true;updateMicUI();
+}
+function updateMicUI(){
+  const btn=document.getElementById("mic-btn");
+  btn.classList.toggle("active",listening);
+  btn.style.color=listening?"var(--red)":"";
+}
+function speakText(text){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text.slice(0,600));
+  utt.lang="bn-BD";utt.rate=1.05;
+  window.speechSynthesis.speak(utt);
+}
+function autoResize(el){el.style.height="auto";el.style.height=Math.min(el.scrollHeight,180)+"px";}
+function handleKey(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleSend();}}
+async function handleSend(){
+  if(loading){abortCtrl?.abort();return;}
+  const txt=document.getElementById("txt").value.trim();
+  if(!txt&&!pendingImg)return;
+  document.getElementById("welcome").classList.add("gone");
+  const img=pendingImg;pendingImg=null;renderPendingImg();
+  document.getElementById("txt").value="";document.getElementById("txt").style.height="auto";
+  document.getElementById("char-count").textContent="0";
+  const now=new Date().toLocaleTimeString("bn-BD",{hour:"2-digit",minute:"2-digit"});
+  const uid=Date.now();
+  const umsg={id:uid,role:"user",text:txt,image:img?.preview,time:now};
+  msgs.push(umsg);
+  const aid=uid+1;
+  const amsg={id:aid,role:"ai",text:"",thinking:"",live:true,thinkLive:false,time:now,model:curModel.shortName};
+  msgs.push(amsg);
+  const chatEl=document.getElementById("chat");
+  chatEl.appendChild(buildMsgEl(umsg));
+  const aiEl=buildMsgEl(amsg);aiEl.id="msg-"+aid;chatEl.appendChild(aiEl);
+  chatEl.scrollTop=chatEl.scrollHeight;
+  const c=chats.find(x=>x.id===activeId);
+  if(c&&c.title==="নতুন Chat"&&txt){c.title=txt.slice(0,26)+(txt.length>26?"…":"");renderChatList();}
+  loading=true;setSendBtn(true);abortCtrl=new AbortController();
+  try{
+    if(curModel.api==="builtin")await doBuiltin(txt,img,amsg,aid);
+    else{if(!proxyOk){openSetup();throw new Error("Proxy চালু নেই। Setup করো।");}await doProxy(txt,amsg,aid);}
+  }catch(err){
+    if(!abortCtrl?.signal.aborted)patchMsg(amsg,aid,{text:"❌ "+err.message,live:false});
+  }
+  loading=false;setSendBtn(false);
+  const c2=chats.find(x=>x.id===activeId);if(c2){c2.msgs=[...msgs];c2.history=[...history];}
+}
+async function doBuiltin(txt,img,amsg,aid){
+  let content;
+  if(img){content=[{type:"image",source:{type:"base64",media_type:img.mediaType,data:img.base64}},{type:"text",text:txt||"এই ছবিটা analyze করো"}];}
+  else content=txt;
+  const r=await fetch(BUILTIN_URL,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:BUILTIN_MODEL_ID,max_tokens:8000,system:SYS,messages:[...history,{role:"user",content}]}),
+    signal:abortCtrl.signal
+  });
+  const d=await r.json();
+  if(d.error)throw new Error(d.error.message);
+  const text=d.content?.map(b=>b.text||"").join("")||"(no response)";
+  history=[...history,{role:"user",content:txt||"[image]"},{role:"assistant",content:text}];
+  const words=text.match(/\S+\s*/g)||[];let built="";
+  for(const w of words){if(abortCtrl.signal.aborted)break;built+=w;patchMsg(amsg,aid,{text:built,live:true});await sleep(10);}
+  patchMsg(amsg,aid,{text,live:false});
+}
+async function doProxy(txt,amsg,aid){
+  const r=await fetch(PROXY_URL+"/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":"james-ai","Authorization":"Bearer james-ai","anthropic-version":"2023-06-01"},
+    body:JSON.stringify({model:curModel.id,max_tokens:16000,system:SYS,messages:[...history,{role:"user",content:txt}],stream:true}),
+    signal:abortCtrl.signal
+  });
+  if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d?.error?.message||`Proxy error ${r.status}`);}
+  const reader=r.body.getReader();const dec=new TextDecoder();
+  let buf="",fullText="",fullThink="";const bt={};
+  while(true){
+    const{value,done}=await reader.read();
+    buf+=dec.decode(value,{stream:!done});
+    const lines=buf.split("\n");buf=lines.pop()||"";
+    for(const line of lines){
+      if(!line.startsWith("data:"))continue;
+      const raw=line.slice(5).trim();if(raw==="[DONE]")continue;
+      try{
+        const ev=JSON.parse(raw);
+        if(ev.type==="content_block_start")bt[ev.index]=ev.content_block?.type||"text";
+        if(ev.type==="content_block_delta"){
+          const t=bt[ev.index]||"text";
+          if((t==="thinking"||ev.delta?.type==="thinking_delta")&&ev.delta?.thinking){fullThink+=ev.delta.thinking;patchMsg(amsg,aid,{text:fullText,thinking:fullThink,live:true,thinkLive:true});}
+          if((t==="text"||ev.delta?.type==="text_delta")&&ev.delta?.text){fullText+=ev.delta.text;patchMsg(amsg,aid,{text:fullText,thinking:fullThink,live:true,thinkLive:false});}
+        }
+      }catch{}
+    }
+    if(done)break;
+  }
+  history=[...history,{role:"user",content:txt},{role:"assistant",content:fullText}];
+  patchMsg(amsg,aid,{text:fullText,thinking:fullThink,live:false,thinkLive:false});
+}
+function renderAll(){
+  const chat=document.getElementById("chat");chat.innerHTML="";
+  document.getElementById("welcome").classList.toggle("gone",msgs.length>0);
+  msgs.forEach(m=>{const el=buildMsgEl(m);el.id="msg-"+m.id;chat.appendChild(el);});
+  chat.scrollTop=chat.scrollHeight;
+}
+function buildMsgEl(m){
+  const el=document.createElement("div");
+  el.className="msg "+(m.role==="user"?"user-msg":"");
+  el.id="msg-"+m.id;
+  if(m.role==="user"){
+    el.innerHTML=`<div class="msg-avatar user-av">👤</div>
+      <div class="msg-content">
+        <div class="msg-bubble user-bubble">
+          ${m.image?`<img class="msg-img" src="${m.image}"/>`:""}
+          ${m.text?escHtml(m.text):""}
+        </div>
+        <div class="msg-meta"><span class="msg-time">${m.time||""}</span></div>
+      </div>`;
+  }else{
+    el.innerHTML=`<div class="msg-avatar ai-av">J</div>
+      <div class="msg-content" style="flex:1;max-width:78%">
+        <div class="msg-bubble ai-bubble" id="bubble-${m.id}">${renderAiBubble(m)}</div>
+        <div class="msg-meta">
+          <span class="msg-time">${m.time||""}</span>
+          ${m.model?`<span class="msg-model">${m.model}</span>`:""}
+        </div>
+      </div>`;
+  }
+  return el;
+}
+function patchMsg(m,id,patch){
+  Object.assign(m,patch);
+  const bubble=document.getElementById("bubble-"+id);
+  if(bubble){bubble.innerHTML=renderAiBubble(m);document.getElementById("chat").scrollTop=document.getElementById("chat").scrollHeight;}
+}
+function renderAiBubble(m){
+  let h="";
+  if(m.thinking){
+    const dots=m.thinkLive?`<div class="think-dots"><span></span><span></span><span></span></div>`:"▾";
+    h+=`<div class="think-wrap">
+      <div class="think-header" onclick="toggleTB('tb-${m.id}')">🧠 ${m.thinkLive?"ভাবছি…":"Reasoning"} ${dots}</div>
+      <div class="think-body" id="tb-${m.id}">${escHtml(m.thinking)}</div>
+    </div>`;
+  }
+  h+=formatMD(m.text||"");
+  if(m.live&&!m.thinkLive&&m.text)h+='<span class="cursor"></span>';
+  const plain=(m.text||"").replace(/```[\s\S]*?```/g,"").replace(/[#*`_]/g,"").trim();
+  if(!m.live&&plain){
+    h+=`<div class="bubble-actions">
+      <button class="ba-btn" onclick="speakText(${JSON.stringify(plain.slice(0,500))})">🔊 শুনুন</button>
+      <button class="ba-btn" onclick="copyToClip(${JSON.stringify(plain)})">📋 Copy</button>
+    </div>`;
+  }
+  return h;
+}
+function toggleTB(id){const el=document.getElementById(id);if(el)el.classList.toggle("closed");}
+function formatMD(text){
+  if(!text)return"";
+  const segs=text.split(/(```[\s\S]*?```)/g);
+  return segs.map(seg=>{
+    if(seg.startsWith("```")){
+      const inner=seg.slice(3,-3),nl=inner.indexOf("\n");
+      const lang=nl>=0?inner.slice(0,nl).trim().toLowerCase():"";
+      const code=(nl>=0?inner.slice(nl+1):inner).trimEnd();
+      return buildCodeBlock(lang,code);
+    }
+    return seg.split("\n").map(line=>{
+      if(/^# (.+)/.test(line))return`<div style="font-size:19px;font-weight:800;margin:14px 0 6px;color:var(--t1)">${escHtml(line.slice(2))}</div>`;
+      if(/^## (.+)/.test(line))return`<div style="font-size:16px;font-weight:700;margin:11px 0 5px;color:var(--t1)">${escHtml(line.slice(3))}</div>`;
+      if(/^### (.+)/.test(line))return`<div style="font-size:13.5px;font-weight:600;color:var(--t2);margin-top:9px">${escHtml(line.slice(4))}</div>`;
+      if(/^[-*] (.+)/.test(line))return`<div style="display:flex;gap:8px;margin-top:4px"><span style="color:var(--acc2);flex-shrink:0">◆</span><span>${inlineFmt(line.replace(/^[-*] /,""))}</span></div>`;
+      const nm=line.match(/^(\d+)\. (.+)/);
+      if(nm)return`<div style="display:flex;gap:8px;margin-top:4px"><span style="color:var(--acc2);font-weight:700;flex-shrink:0;min-width:16px">${nm[1]}.</span><span>${inlineFmt(nm[2])}</span></div>`;
+      if(/^> (.+)/.test(line))return`<div style="border-left:3px solid var(--acc);padding:4px 12px;background:rgba(124,106,247,.06);border-radius:0 6px 6px 0;margin:4px 0;color:var(--t2)">${inlineFmt(line.slice(2))}</div>`;
+      if(/^---+$/.test(line))return`<hr style="border:none;border-top:1px solid var(--b2);margin:12px 0"/>`;
+      return line?`<span>${inlineFmt(line)}</span>`:"<br/>";
+    }).join("\n");
+  }).join("");
+}
+function buildCodeBlock(lang,code){
+  const esc=escAttr(code);
+  return`<div class="code-block" data-code="${esc}" data-lang="${lang}">
+    <div class="code-top">
+      <span class="code-lang-badge"><span class="code-dot"></span>${lang||"code"}</span>
+      <div class="code-btns">
+        ${lang==="html"?`<button class="c-btn preview" onclick="previewHTML(this)">▶ Preview</button>`:""}
+        <button class="c-btn" onclick="copyCodeBlock(this)">Copy</button>
+        <button class="c-btn" onclick="downloadCode(this)">⬇ Download</button>
+      </div>
+    </div>
+    <pre class="code-pre"><code>${escHtml(code)}</code></pre>
+  </div>`;
+}
+function inlineFmt(s){
+  return escHtml(s)
+    .replace(/\*\*(.+?)\*\*/g,"<strong style='color:var(--t1)'>$1</strong>")
+    .replace(/\*(.+?)\*/g,"<em>$1</em>")
+    .replace(/_(.+?)_/g,"<em>$1</em>")
+    .replace(/`([^`]+)`/g,`<code style="background:rgba(124,106,247,.15);color:var(--acc2);border-radius:5px;padding:1px 6px;font-size:.87em;font-family:monospace;border:1px solid rgba(124,106,247,.2)">$1</code>`)
+    .replace(/\[(.+?)\]\((.+?)\)/g,`<a href="$2" target="_blank" style="color:var(--blue);border-bottom:1px solid rgba(59,130,246,.3)">$1</a>`);
+}
+function getCodeData(btn){const w=btn.closest(".code-block");return{code:decodeAmp(w.dataset.code),lang:w.dataset.lang};}
+function copyCodeBlock(btn){
+  const{code}=getCodeData(btn);
+  navigator.clipboard.writeText(code).catch(()=>{});
+  btn.textContent="✓ Copied";btn.classList.add("copied");
+  setTimeout(()=>{btn.textContent="Copy";btn.classList.remove("copied");},2000);
+}
+function downloadCode(btn){
+  const{code,lang}=getCodeData(btn);
+  const exts={html:"html",python:"py",javascript:"js",typescript:"ts",css:"css",php:"php",sql:"sql",bash:"sh",json:"json"};
+  dl(code,"james-ai-code."+(exts[lang]||"txt"),"text/plain");
+}
+function previewHTML(btn){
+  const{code}=getCodeData(btn);curHtml=code;
+  document.getElementById("html-frame").srcdoc=code;
+  document.getElementById("html-modal").classList.add("open");
+}
+function closeHtmlModal(){document.getElementById("html-modal").classList.remove("open");}
+function downloadCurrentHtml(){dl(curHtml,"index.html","text/html");}
+function dl(content,name,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();}
+function copyToClip(text){navigator.clipboard.writeText(text).catch(()=>{});}
+function openSetup(){document.getElementById("setup-modal").classList.add("open");}
+function closeSetup(){document.getElementById("setup-modal").classList.remove("open");}
+function copyCmd(el){navigator.clipboard.writeText(el.textContent.trim()).catch(()=>{});el.style.borderColor="var(--green)";setTimeout(()=>el.style.borderColor="",1500);}
+function setSendBtn(isLoading){
+  const btn=document.getElementById("send-btn"),ico=document.getElementById("send-ico");
+  btn.classList.toggle("stop-mode",isLoading);
+  if(isLoading){ico.setAttribute("fill","#fff");ico.setAttribute("stroke","none");ico.removeAttribute("stroke-width");ico.removeAttribute("stroke-linecap");ico.removeAttribute("stroke-linejoin");ico.innerHTML='<rect x="5" y="5" width="14" height="14" rx="3"/>';}
+  else{ico.setAttribute("fill","none");ico.setAttribute("stroke","#fff");ico.setAttribute("stroke-width","2.5");ico.setAttribute("stroke-linecap","round");ico.setAttribute("stroke-linejoin","round");ico.innerHTML='<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>';}
+}
+function escHtml(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function escAttr(s){return(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;");}
+function decodeAmp(s){return(s||"").replace(/&amp;/g,"&").replace(/&quot;/g,'"');}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+</script>
+</body>
+</html>
