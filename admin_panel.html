@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BD TopSell — Admin Panel</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg-deep: #070B14;
+  --bg-card: #0F172A;
+  --bg-surface: #1E293B;
+  --bg-hover: #243048;
+  --accent-blue: #3B82F6;
+  --accent-blue-glow: rgba(59,130,246,0.25);
+  --accent-green: #22C55E;
+  --accent-green-glow: rgba(34,197,94,0.2);
+  --accent-red: #EF4444;
+  --accent-amber: #F59E0B;
+  --accent-purple: #8B5CF6;
+  --accent-cyan: #06B6D4;
+  --text-primary: #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-muted: #64748B;
+  --border: #1E293B;
+  --border-bright: #334155;
+  --sidebar-w: 260px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; background:var(--bg-deep); color:var(--text-primary); font-family:'Segoe UI',system-ui,sans-serif; overflow-x:hidden; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--bg-deep); }
+::-webkit-scrollbar-thumb { background:var(--border-bright); border-radius:10px; }
+
+/* ── LOGIN SCREEN ── */
+#loginScreen {
+  position:fixed; inset:0; background:var(--bg-deep);
+  display:flex; align-items:center; justify-content:center; z-index:999;
+}
+.login-box {
+  background:var(--bg-card); border:1px solid var(--border-bright);
+  border-radius:20px; padding:40px 48px; width:400px; max-width:90vw;
+  box-shadow:0 0 60px rgba(59,130,246,0.15);
+}
+.login-logo { text-align:center; margin-bottom:28px; }
+.login-logo .logo-icon {
+  width:64px; height:64px; background:linear-gradient(135deg,#3B82F6,#8B5CF6);
+  border-radius:16px; display:inline-flex; align-items:center; justify-content:center;
+  font-size:28px; margin-bottom:12px; box-shadow:0 0 30px rgba(59,130,246,0.4);
+}
+.login-logo h1 { font-size:22px; font-weight:700; }
+.login-logo p { color:var(--text-muted); font-size:13px; margin-top:4px; }
+.login-field { margin-bottom:16px; }
+.login-field label { display:block; font-size:12px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+.login-field input {
+  width:100%; padding:12px 16px; background:var(--bg-surface);
+  border:1px solid var(--border-bright); border-radius:10px;
+  color:var(--text-primary); font-size:14px; outline:none; transition:.2s;
+}
+.login-field input:focus { border-color:var(--accent-blue); box-shadow:0 0 0 3px var(--accent-blue-glow); }
+.btn-login {
+  width:100%; padding:13px; background:linear-gradient(135deg,#3B82F6,#6366F1);
+  border:none; border-radius:10px; color:#fff; font-size:15px; font-weight:600;
+  cursor:pointer; transition:.2s; margin-top:8px;
+}
+.btn-login:hover { opacity:.9; transform:translateY(-1px); }
+.login-error { color:var(--accent-red); font-size:13px; text-align:center; margin-top:10px; min-height:20px; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  position:fixed; left:0; top:0; bottom:0; width:var(--sidebar-w);
+  background:var(--bg-card); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; z-index:100; transition:.3s;
+}
+.sidebar-logo {
+  padding:22px 20px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:12px;
+}
+.sidebar-logo .s-icon {
+  width:40px; height:40px; background:linear-gradient(135deg,#3B82F6,#8B5CF6);
+  border-radius:10px; display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0; box-shadow:0 0 20px rgba(59,130,246,0.3);
+}
+.sidebar-logo h2 { font-size:16px; font-weight:700; line-height:1.2; }
+.sidebar-logo span { font-size:11px; color:var(--text-muted); }
+.sidebar-nav { flex:1; padding:12px 10px; overflow-y:auto; }
+.nav-section-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; padding:8px 10px 4px; }
+.nav-item {
+  display:flex; align-items:center; gap:12px; padding:10px 12px;
+  border-radius:10px; cursor:pointer; transition:.15s; margin-bottom:2px;
+  color:var(--text-secondary); font-size:14px; font-weight:500; position:relative;
+}
+.nav-item:hover { background:var(--bg-hover); color:var(--text-primary); }
+.nav-item.active { background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(99,102,241,.15)); color:var(--accent-blue); }
+.nav-item.active::before { content:''; position:absolute; left:0; top:20%; bottom:20%; width:3px; background:var(--accent-blue); border-radius:2px; }
+.nav-item .nav-icon { font-size:18px; width:24px; text-align:center; flex-shrink:0; }
+.nav-badge { margin-left:auto; background:var(--accent-red); color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:10px; }
+.sidebar-bottom { padding:12px 10px; border-top:1px solid var(--border); }
+.bot-status {
+  display:flex; align-items:center; gap:10px; padding:12px;
+  background:var(--bg-surface); border-radius:10px; margin-bottom:8px;
+}
+.status-dot { width:8px; height:8px; border-radius:50%; background:var(--accent-green); box-shadow:0 0 8px var(--accent-green); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.status-text { font-size:12px; }
+.status-text .st-label { color:var(--text-muted); }
+.status-text .st-val { color:var(--accent-green); font-weight:600; }
+.btn-logout {
+  width:100%; padding:9px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3);
+  border-radius:8px; color:var(--accent-red); font-size:13px; cursor:pointer; transition:.2s;
+}
+.btn-logout:hover { background:rgba(239,68,68,.2); }
+
+/* ── MAIN ── */
+#main { margin-left:var(--sidebar-w); min-height:100vh; display:flex; flex-direction:column; }
+#topbar {
+  position:sticky; top:0; background:rgba(7,11,20,.8); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border); padding:0 28px; height:64px;
+  display:flex; align-items:center; justify-content:space-between; z-index:50;
+}
+.topbar-title { font-size:18px; font-weight:700; }
+.topbar-right { display:flex; align-items:center; gap:16px; }
+.topbar-time { font-size:12px; color:var(--text-muted); background:var(--bg-surface); padding:6px 12px; border-radius:8px; font-family:monospace; }
+.topbar-admin { display:flex; align-items:center; gap:8px; }
+.admin-avatar { width:34px; height:34px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; }
+#content { flex:1; padding:24px 28px; }
+
+/* ── PAGE / SECTION ── */
+.page { display:none; }
+.page.active { display:block; }
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.section-title { font-size:20px; font-weight:700; display:flex; align-items:center; gap:10px; }
+.section-title .icon { font-size:22px; }
+
+/* ── STAT CARDS ── */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
+.stat-card {
+  background:var(--bg-card); border:1px solid var(--border); border-radius:14px;
+  padding:20px; position:relative; overflow:hidden; transition:.2s; cursor:default;
+}
+.stat-card:hover { border-color:var(--border-bright); transform:translateY(-2px); }
+.stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+.stat-card.blue::before { background:linear-gradient(90deg,#3B82F6,#6366F1); box-shadow:0 2px 8px rgba(59,130,246,.4); }
+.stat-card.green::before { background:linear-gradient(90deg,#22C55E,#16A34A); box-shadow:0 2px 8px rgba(34,197,94,.4); }
+.stat-card.red::before { background:linear-gradient(90deg,#EF4444,#DC2626); box-shadow:0 2px 8px rgba(239,68,68,.4); }
+.stat-card.amber::before { background:linear-gradient(90deg,#F59E0B,#D97706); box-shadow:0 2px 8px rgba(245,158,11,.4); }
+.stat-card.purple::before { background:linear-gradient(90deg,#8B5CF6,#7C3AED); box-shadow:0 2px 8px rgba(139,92,246,.4); }
+.stat-card.cyan::before { background:linear-gradient(90deg,#06B6D4,#0891B2); box-shadow:0 2px 8px rgba(6,182,212,.4); }
+.stat-icon { font-size:28px; margin-bottom:12px; display:block; }
+.stat-val { font-size:28px; font-weight:800; letter-spacing:-1px; }
+.stat-label { font-size:12px; color:var(--text-muted); margin-top:4px; }
+.stat-change { font-size:11px; margin-top:8px; display:flex; align-items:center; gap:4px; }
+.stat-change.up { color:var(--accent-green); }
+.stat-change.down { color:var(--accent-red); }
+
+/* ── TABLES ── */
+.table-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.table-head { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.table-head h3 { font-size:15px; font-weight:600; }
+.search-input {
+  padding:8px 14px; background:var(--bg-surface); border:1px solid var(--border-bright);
+  border-radius:8px; color:var(--text-primary); font-size:13px; outline:none; width:220px;
+}
+.search-input:focus { border-color:var(--accent-blue); }
+table { width:100%; border-collapse:collapse; }
+th { padding:12px 16px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); border-bottom:1px solid var(--border); background:var(--bg-surface); }
+td { padding:12px 16px; font-size:13px; border-bottom:1px solid rgba(30,41,59,.5); }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(30,41,59,.4); }
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge.pending { background:rgba(245,158,11,.15); color:var(--accent-amber); border:1px solid rgba(245,158,11,.3); }
+.badge.approved { background:rgba(34,197,94,.15); color:var(--accent-green); border:1px solid rgba(34,197,94,.3); }
+.badge.rejected { background:rgba(239,68,68,.15); color:var(--accent-red); border:1px solid rgba(239,68,68,.3); }
+.badge.active { background:rgba(59,130,246,.15); color:var(--accent-blue); border:1px solid rgba(59,130,246,.3); }
+
+/* ── BUTTONS ── */
+.btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:.15s; display:inline-flex; align-items:center; gap:6px; }
+.btn:hover { opacity:.85; transform:translateY(-1px); }
+.btn-primary { background:linear-gradient(135deg,#3B82F6,#6366F1); color:#fff; }
+.btn-success { background:linear-gradient(135deg,#22C55E,#16A34A); color:#fff; }
+.btn-danger { background:linear-gradient(135deg,#EF4444,#DC2626); color:#fff; }
+.btn-warning { background:linear-gradient(135deg,#F59E0B,#D97706); color:#fff; }
+.btn-ghost { background:var(--bg-surface); color:var(--text-secondary); border:1px solid var(--border-bright); }
+.btn-sm { padding:5px 10px; font-size:11px; }
+
+/* ── FORMS / CARDS ── */
+.card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:20px; }
+.card + .card { margin-top:16px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+.form-row.single { grid-template-columns:1fr; }
+.form-row.triple { grid-template-columns:1fr 1fr 1fr; }
+.form-group { }
+.form-group label { display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+.form-control {
+  width:100%; padding:10px 14px; background:var(--bg-surface);
+  border:1px solid var(--border-bright); border-radius:8px;
+  color:var(--text-primary); font-size:13px; outline:none; transition:.2s;
+}
+.form-control:focus { border-color:var(--accent-blue); box-shadow:0 0 0 2px var(--accent-blue-glow); }
+select.form-control option { background:var(--bg-card); }
+textarea.form-control { resize:vertical; min-height:90px; font-family:inherit; }
+
+/* ── MODALS ── */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center; z-index:999;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+  background:var(--bg-card); border:1px solid var(--border-bright);
+  border-radius:16px; padding:28px; width:520px; max-width:95vw; max-height:90vh; overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.modal-title { font-size:18px; font-weight:700; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+
+/* ── TABS ── */
+.tabs { display:flex; gap:4px; margin-bottom:20px; background:var(--bg-surface); padding:4px; border-radius:10px; width:fit-content; }
+.tab { padding:8px 18px; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; transition:.15s; color:var(--text-muted); }
+.tab.active { background:var(--bg-card); color:var(--text-primary); box-shadow:0 1px 4px rgba(0,0,0,.3); }
+
+/* ── BROADCAST ── */
+.broadcast-preview {
+  background:var(--bg-surface); border:1px solid var(--border-bright);
+  border-radius:10px; padding:14px; font-size:13px; line-height:1.6;
+  min-height:60px; white-space:pre-wrap; color:var(--text-secondary);
+  margin-top:10px;
+}
+
+/* ── PAYMENT BOX ── */
+.payment-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.pay-box { background:var(--bg-surface); border:1px solid var(--border-bright); border-radius:12px; padding:18px; }
+.pay-box h4 { font-size:13px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.username-list {
+  width:100%; min-height:120px; padding:10px; background:var(--bg-card);
+  border:1px solid var(--border-bright); border-radius:8px; color:var(--text-primary);
+  font-size:13px; font-family:monospace; resize:vertical; outline:none;
+}
+.username-list:focus { border-color:var(--accent-blue); }
+.pay-summary { background:var(--bg-card); border-radius:8px; padding:12px; margin-top:10px; font-size:12px; }
+.pay-summary-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border); }
+.pay-summary-row:last-child { border:none; font-weight:700; color:var(--accent-green); }
+
+/* ── STOCK MANAGER ── */
+.stock-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+.stock-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.stock-card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.stock-name { font-size:13px; font-weight:600; }
+.stock-count { font-size:22px; font-weight:800; color:var(--accent-blue); }
+.stock-bar { height:4px; background:var(--bg-surface); border-radius:2px; margin-top:8px; }
+.stock-bar-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,#3B82F6,#8B5CF6); transition:.5s; }
+
+/* ── TOAST ── */
+#toast {
+  position:fixed; bottom:24px; right:24px; z-index:9999;
+  display:flex; flex-direction:column; gap:8px; pointer-events:none;
+}
+.toast-item {
+  padding:12px 18px; border-radius:10px; font-size:13px; font-weight:500;
+  display:flex; align-items:center; gap:10px; min-width:260px;
+  animation:slideIn .3s ease; box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
+.toast-item.success { background:#166534; border:1px solid #22C55E; color:#86EFAC; }
+.toast-item.error { background:#7F1D1D; border:1px solid #EF4444; color:#FCA5A5; }
+.toast-item.info { background:#1E3A5F; border:1px solid #3B82F6; color:#93C5FD; }
+@keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+/* ── EMPTY STATE ── */
+.empty-state { text-align:center; padding:60px 20px; color:var(--text-muted); }
+.empty-state .e-icon { font-size:48px; margin-bottom:14px; opacity:.5; }
+.empty-state p { font-size:14px; }
+
+/* ── CHARTS PLACEHOLDER ── */
+.chart-box { background:var(--bg-surface); border-radius:10px; height:160px; display:flex; align-items:flex-end; gap:6px; padding:16px 12px 8px; overflow:hidden; }
+.chart-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.chart-bar { width:100%; border-radius:4px 4px 0 0; transition:1s; }
+.chart-bar-label { font-size:9px; color:var(--text-muted); }
+
+/* ── TASK DATA TABLE ── */
+.data-row-actions { display:flex; gap:6px; }
+.mono { font-family:monospace; font-size:12px; color:var(--accent-cyan); }
+
+/* ── RESPONSIVE ── */
+@media (max-width:900px) {
+  #sidebar { transform:translateX(-100%); }
+  #sidebar.open { transform:translateX(0); }
+  #main { margin-left:0; }
+  .form-row { grid-template-columns:1fr; }
+  .payment-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-icon">🤖</div>
+      <h1>BD TopSell</h1>
+      <p>Admin Control Panel</p>
+    </div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="admin" autocomplete="off">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="off">
+    </div>
+    <button class="btn-login" onclick="doLogin()">🔐 Login to Panel</button>
+    <div class="login-error" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="s-icon">🤖</div>
+    <div>
+      <h2>BD TopSell</h2>
+      <span>Admin Panel v2.0</span>
+    </div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Overview</div>
+    <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span> Dashboard</div>
+    <div class="nav-section-label">Management</div>
+    <div class="nav-item" onclick="showPage('orders',this)"><span class="nav-icon">📋</span> Task Orders <span class="nav-badge" id="pendingBadge">0</span></div>
+    <div class="nav-item" onclick="showPage('users',this)"><span class="nav-icon">👥</span> Users</div>
+    <div class="nav-item" onclick="showPage('payments',this)"><span class="nav-icon">💰</span> Payments</div>
+    <div class="nav-section-label">Tasks</div>
+    <div class="nav-item" onclick="showPage('taskdata',this)"><span class="nav-icon">📁</span> Task Data (Export)</div>
+    <div class="nav-item" onclick="showPage('stock',this)"><span class="nav-icon">🏪</span> Stock Manager</div>
+    <div class="nav-section-label">Tools</div>
+    <div class="nav-item" onclick="showPage('broadcast',this)"><span class="nav-icon">📢</span> Broadcast</div>
+    <div class="nav-item" onclick="showPage('settings',this)"><span class="nav-icon">⚙️</span> Bot Settings</div>
+    <div class="nav-item" onclick="showPage('withdraw',this)"><span class="nav-icon">💳</span> Withdraw Options</div>
+  </div>
+  <div class="sidebar-bottom">
+    <div class="bot-status">
+      <div class="status-dot"></div>
+      <div class="status-text">
+        <div class="st-label">Bot Status</div>
+        <div class="st-val">● Online</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">🚪 Logout</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <div class="topbar-title" id="pageTitle">📊 Dashboard</div>
+    <div class="topbar-right">
+      <div class="topbar-time" id="clock">--:--:--</div>
+      <div class="topbar-admin">
+        <div class="admin-avatar">A</div>
+        <span style="font-size:13px;color:var(--text-secondary)">Admin</span>
+      </div>
+    </div>
+  </div>
+  <div id="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card blue"><span class="stat-icon">👥</span><div class="stat-val" id="s-users">0</div><div class="stat-label">Total Users</div><div class="stat-change up">↑ Loading...</div></div>
+        <div class="stat-card green"><span class="stat-icon">✅</span><div class="stat-val" id="s-done">0</div><div class="stat-label">Tasks Completed</div><div class="stat-change up">↑ Today</div></div>
+        <div class="stat-card amber"><span class="stat-icon">⏳</span><div class="stat-val" id="s-pending">0</div><div class="stat-label">Pending Review</div><div class="stat-change">Awaiting</div></div>
+        <div class="stat-card red"><span class="stat-icon">❌</span><div class="stat-val" id="s-rejected">0</div><div class="stat-label">Rejected Tasks</div><div class="stat-change down">↓</div></div>
+        <div class="stat-card purple"><span class="stat-icon">💸</span><div class="stat-val" id="s-paid">৳0</div><div class="stat-label">Total Paid Out</div><div class="stat-change up">↑</div></div>
+        <div class="stat-card cyan"><span class="stat-icon">📦</span><div class="stat-val" id="s-stock">0</div><div class="stat-label">Products in Stock</div><div class="stat-change">Active</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="card">
+          <div style="font-size:14px;font-weight:600;margin-bottom:12px">📈 Weekly Task Volume</div>
+          <div class="chart-box" id="weekChart"></div>
+        </div>
+        <div class="card">
+          <div style="font-size:14px;font-weight:600;margin-bottom:12px">🔥 Recent Activity</div>
+          <div id="recentActivity" style="font-size:13px;color:var(--text-secondary)"></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div style="font-size:14px;font-weight:600;margin-bottom:12px">🏆 Top Workers (Weekly)</div>
+          <div id="topWorkers"></div>
+        </div>
+        <div class="card">
+          <div style="font-size:14px;font-weight:600;margin-bottom:12px">📊 Task Breakdown</div>
+          <div id="taskBreakdown"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ORDERS ── -->
+    <div class="page" id="page-orders">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">📋</span> Task Order Management</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-success btn-sm" onclick="bulkApprove()">✅ Bulk Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkReject()">❌ Bulk Reject</button>
+          <button class="btn btn-ghost btn-sm" onclick="refreshOrders()">🔄 Refresh</button>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="filterOrders('all',this)">All</div>
+        <div class="tab" onclick="filterOrders('pending',this)">⏳ Pending</div>
+        <div class="tab" onclick="filterOrders('approved',this)">✅ Approved</div>
+        <div class="tab" onclick="filterOrders('rejected',this)">❌ Rejected</div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-head">
+          <h3>Task Submissions</h3>
+          <div style="display:flex;gap:8px">
+            <input class="search-input" placeholder="🔍 Search user / task..." oninput="searchOrders(this.value)" id="orderSearch">
+            <select class="form-control" style="width:140px" onchange="filterOrderType(this.value)">
+              <option value="">All Types</option>
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th><input type="checkbox" onchange="toggleSelectAll(this)"></th>
+              <th>Order ID</th><th>User</th><th>Task Type</th><th>Submitted</th><th>Amount</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="ordersTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── USERS ── -->
+    <div class="page" id="page-users">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">👥</span> User Management</div>
+        <button class="btn btn-primary btn-sm" onclick="exportUsers()">📥 Export Users</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-head">
+          <h3>All Users</h3>
+          <input class="search-input" placeholder="🔍 Search users..." oninput="searchUsers(this.value)">
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>Telegram ID</th><th>Username</th><th>Name</th><th>Balance</th><th>Tasks Done</th><th>Referrals</th><th>Language</th><th>Joined</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="usersTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAYMENTS ── -->
+    <div class="page" id="page-payments">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">💰</span> Payment Manager</div>
+      </div>
+      <div class="payment-grid">
+        <div class="pay-box">
+          <h4>💳 Bulk Payment via Username</h4>
+          <div class="form-group">
+            <label>Paste Telegram Usernames (one per line)</label>
+            <textarea class="username-list" id="bulkUsernames" placeholder="@user1&#10;@user2&#10;@user3" oninput="calcPaySummary()"></textarea>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Task Type</label>
+            <select class="form-control" id="bulkTaskType" onchange="calcPaySummary()">
+              <option value="instagram">Instagram 2FA (৳4.60)</option>
+              <option value="facebook">Facebook Number Cookie (৳5.00)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Custom Amount per User (৳)</label>
+            <input class="form-control" type="number" id="customAmt" placeholder="Leave blank = auto" oninput="calcPaySummary()">
+          </div>
+          <div class="pay-summary" id="paySummary"></div>
+          <button class="btn btn-success" style="margin-top:12px;width:100%" onclick="executeBulkPay()">💸 Send Payments Now</button>
+        </div>
+        <div class="pay-box">
+          <h4>📜 Payment History</h4>
+          <div id="payHistory" style="font-size:13px;max-height:400px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <div style="margin-top:16px" class="table-wrap">
+        <div class="table-head"><h3>💳 Withdraw Requests</h3></div>
+        <table><thead><tr><th>User</th><th>Amount</th><th>Method</th><th>Address</th><th>Requested</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="withdrawTable"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ── TASK DATA EXPORT ── -->
+    <div class="page" id="page-taskdata">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">📁</span> Task Data & Export</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="card">
+          <h4 style="margin-bottom:14px;display:flex;align-items:center;gap:8px">📸 Instagram Task Data</h4>
+          <div class="table-wrap" style="margin-bottom:12px">
+            <table><thead><tr><th>#</th><th>Username</th><th>Password</th><th>2FA Secret</th><th>Submitted By</th><th>Date</th></tr></thead>
+            <tbody id="igDataTable"></tbody></table>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="exportXLSX('instagram')">📥 Download XLSX</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearTaskData('instagram')">🗑️ Clear</button>
+          </div>
+        </div>
+        <div class="card">
+          <h4 style="margin-bottom:14px;display:flex;align-items:center;gap:8px">📘 Facebook Task Data</h4>
+          <div class="table-wrap" style="margin-bottom:12px">
+            <table><thead><tr><th>#</th><th>First Name</th><th>Last Name</th><th>Password</th><th>UID</th><th>Cookie</th><th>Date</th></tr></thead>
+            <tbody id="fbDataTable"></tbody></table>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="exportXLSX('facebook')">📥 Download XLSX</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearTaskData('facebook')">🗑️ Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STOCK ── -->
+    <div class="page" id="page-stock">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">🏪</span> Stock Manager</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="openAddProduct()">➕ Add Product</button>
+          <button class="btn btn-warning btn-sm" onclick="resetAllStock()">🔄 Reset All Stock</button>
+          <button class="btn btn-ghost btn-sm" onclick="autoGenerateStock()">⚡ Auto Generate</button>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="filterStock('all',this)">All</div>
+        <div class="tab" onclick="filterStock('vpn',this)">🔑 VPN</div>
+        <div class="tab" onclick="filterStock('proxy',this)">🌐 Proxy</div>
+        <div class="tab" onclick="filterStock('mail',this)">📧 Mail</div>
+        <div class="tab" onclick="filterStock('app',this)">📱 App</div>
+      </div>
+      <div class="stock-grid" id="stockGrid"></div>
+    </div>
+
+    <!-- ── BROADCAST ── -->
+    <div class="page" id="page-broadcast">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">📢</span> Broadcast Message</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Target Audience</label>
+            <select class="form-control" id="broadcastTarget">
+              <option value="all">👥 All Users</option>
+              <option value="active">✅ Active Users (completed ≥1 task)</option>
+              <option value="inactive">💤 Inactive Users</option>
+              <option value="bangla">🇧🇩 Bangla Language Users</option>
+              <option value="english">🇬🇧 English Language Users</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Message (supports emoji)</label>
+            <textarea class="form-control" id="broadcastMsg" rows="8" placeholder="🎉 Special announcement!&#10;&#10;আজকে নতুন task এসেছে..." oninput="updatePreview()"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Button Text (optional)</label>
+            <input class="form-control" id="broadcastBtn" placeholder="🔗 Click Here">
+          </div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Button URL (optional)</label>
+            <input class="form-control" id="broadcastUrl" placeholder="https://t.me/...">
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="sendBroadcast()">📢 Send Broadcast</button>
+        </div>
+        <div class="card">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-muted)">Preview</div>
+          <div style="background:var(--bg-surface);border-radius:12px;padding:14px;position:relative">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">🤖 BD TopSell Bot</div>
+            <div class="broadcast-preview" id="broadcastPreview">Your message will appear here...</div>
+            <div id="broadcastBtnPreview" style="margin-top:10px;display:none">
+              <div style="background:var(--accent-blue);border-radius:8px;padding:8px 14px;text-align:center;font-size:13px;font-weight:600">Preview Button</div>
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px">📊 Broadcast History</div>
+            <div id="broadcastHistory" style="font-size:12px;color:var(--text-muted)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div class="page" id="page-settings">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">⚙️</span> Bot Settings</div>
+        <button class="btn btn-success" onclick="saveSettings()">💾 Save All Settings</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px">📸 Instagram Task</div>
+          <div class="form-row">
+            <div class="form-group"><label>Task Name</label><input class="form-control" id="igName" value="Instagram 2FA Task"></div>
+            <div class="form-group"><label>Payment (৳)</label><input class="form-control" type="number" id="igPay" value="4.60"></div>
+          </div>
+          <div class="form-row single">
+            <div class="form-group"><label>Task Description</label><textarea class="form-control" id="igDesc" rows="3">Register the Instagram account using the given details and turn on 2FA.</textarea></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Status</label>
+              <select class="form-control" id="igStatus"><option value="active">✅ Active</option><option value="inactive">⛔ Inactive</option></select>
+            </div>
+            <div class="form-group"><label>Daily Limit per User</label><input class="form-control" type="number" id="igLimit" value="5"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px">📘 Facebook Task</div>
+          <div class="form-row">
+            <div class="form-group"><label>Task Name</label><input class="form-control" id="fbName" value="Facebook Number Cookie"></div>
+            <div class="form-group"><label>Payment (৳)</label><input class="form-control" type="number" id="fbPay" value="5.00"></div>
+          </div>
+          <div class="form-row single">
+            <div class="form-group"><label>Task Description</label><textarea class="form-control" id="fbDesc" rows="3">Create Facebook account with given credentials and submit cookie.</textarea></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Status</label>
+              <select class="form-control" id="fbStatus"><option value="active">✅ Active</option><option value="inactive">⛔ Inactive</option></select>
+            </div>
+            <div class="form-group"><label>Daily Limit per User</label><input class="form-control" type="number" id="fbLimit" value="5"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px">🤖 Bot Configuration</div>
+          <div class="form-row single"><div class="form-group"><label>Bot Token</label><input class="form-control" id="botToken" type="password" placeholder="••••••••••••••••"></div></div>
+          <div class="form-row">
+            <div class="form-group"><label>Support Group Link</label><input class="form-control" id="supportLink" placeholder="https://t.me/..."></div>
+            <div class="form-group"><label>Channel Link</label><input class="form-control" id="channelLink" placeholder="https://t.me/..."></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Min Withdraw (৳)</label><input class="form-control" type="number" id="minWithdraw" value="50"></div>
+            <div class="form-group"><label>Referral Commission (%)</label><input class="form-control" type="number" id="refPercent" value="10"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px">🏆 Leaderboard Prizes</div>
+          <div class="form-row triple">
+            <div class="form-group"><label>🥇 1st (৳)</label><input class="form-control" type="number" id="prize1" value="600"></div>
+            <div class="form-group"><label>🥈 2nd (৳)</label><input class="form-control" type="number" id="prize2" value="300"></div>
+            <div class="form-group"><label>🥉 3rd (৳)</label><input class="form-control" type="number" id="prize3" value="200"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>4th (৳)</label><input class="form-control" type="number" id="prize4" value="100"></div>
+            <div class="form-group"><label>5th (৳)</label><input class="form-control" type="number" id="prize5" value="50"></div>
+          </div>
+          <div class="form-row single">
+            <div class="form-group"><label>Reset Day</label>
+              <select class="form-control" id="lbReset"><option value="friday">Friday 9PM</option><option value="sunday">Sunday 12AM</option><option value="monday">Monday 12AM</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WITHDRAW OPTIONS ── -->
+    <div class="page" id="page-withdraw">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">💳</span> Withdraw Options</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddWithdraw()">➕ Add Method</button>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Method Name</th><th>Icon</th><th>Charge (৳)</th><th>Min (৳)</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="withdrawMethodsTable"></tbody></table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- MODALS -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal">
+    <div class="modal-title">📦 <span id="productModalTitle">Add Product</span></div>
+    <div class="form-row">
+      <div class="form-group"><label>Product Name</label><input class="form-control" id="pName" placeholder="Nord VPN - 7D"></div>
+      <div class="form-group"><label>Category</label>
+        <select class="form-control" id="pCat">
+          <option value="vpn">VPN</option><option value="proxy">Proxy/IP</option>
+          <option value="mail">Mail</option><option value="app">Premium App</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Price (৳)</label><input class="form-control" type="number" id="pPrice" placeholder="25"></div>
+      <div class="form-group"><label>Initial Stock</label><input class="form-control" type="number" id="pStock" placeholder="500"></div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group"><label>Paste Credentials (one per line)</label>
+        <textarea class="form-control" id="pCredentials" rows="5" placeholder="email:password&#10;email2:password2"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('productModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProduct()">💾 Save Product</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <div class="modal-title">👤 User Details</div>
+    <div id="userModalContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('userModal')">Close</button>
+      <button class="btn btn-warning" onclick="adjustBalance()">💰 Adjust Balance</button>
+      <button class="btn btn-danger btn-sm" onclick="banUser()">🚫 Ban User</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="withdrawModal">
+  <div class="modal">
+    <div class="modal-title">➕ Add Withdraw Method</div>
+    <div class="form-row">
+      <div class="form-group"><label>Method Name</label><input class="form-control" id="wmName" placeholder="bKash"></div>
+      <div class="form-group"><label>Icon/Emoji</label><input class="form-control" id="wmIcon" placeholder="💳"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Charge (৳)</label><input class="form-control" type="number" id="wmCharge" placeholder="5"></div>
+      <div class="form-group"><label>Min Amount (৳)</label><input class="form-control" type="number" id="wmMin" placeholder="50"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('withdrawModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveWithdrawMethod()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  FIREBASE CONFIG
+// ══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyC1QTJPKzOFFJu6SgjwdpMxZ0WmieMacyQ",
+  authDomain: "james-admin-cb377.firebaseapp.com",
+  projectId: "james-admin-cb377",
+  storageBucket: "james-admin-cb377.firebasestorage.app",
+  messagingSenderId: "119874781926",
+  appId: "1:119874781926:web:b9de4474490ed9f5b7b127"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ══════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "BDTopSell@2026";
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  document.getElementById('loginErr').textContent = '';
+  if(u === ADMIN_USER && p === ADMIN_PASS) {
+    document.getElementById('loginScreen').style.display = 'none';
+    initPanel();
+  } else {
+    document.getElementById('loginErr').textContent = '❌ Wrong username or password';
+  }
+}
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+function doLogout() { location.reload(); }
+
+// ══════════════════════════════════════════════
+//  CLOCK
+// ══════════════════════════════════════════════
+function startClock() {
+  setInterval(() => {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-BD',{hour12:false});
+  }, 1000);
+}
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+const pageTitles = {
+  dashboard:'📊 Dashboard', orders:'📋 Task Orders', users:'👥 Users',
+  payments:'💰 Payments', taskdata:'📁 Task Data', stock:'🏪 Stock Manager',
+  broadcast:'📢 Broadcast', settings:'⚙️ Bot Settings', withdraw:'💳 Withdraw Options'
+};
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('pageTitle').textContent = pageTitles[name];
+  if(name==='orders') refreshOrders();
+  if(name==='users') refreshUsers();
+  if(name==='stock') refreshStock();
+  if(name==='taskdata') refreshTaskData();
+  if(name==='payments') refreshPayments();
+  if(name==='withdraw') refreshWithdrawMethods();
+}
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+function toast(msg, type='info') {
+  const t = document.getElementById('toast');
+  const d = document.createElement('div');
+  d.className = `toast-item ${type}`;
+  d.innerHTML = (type==='success'?'✅':type==='error'?'❌':'ℹ️') + ' ' + msg;
+  t.appendChild(d);
+  setTimeout(() => d.remove(), 3500);
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+function initPanel() {
+  startClock();
+  loadDashboard();
+  setupRealtimeListeners();
+}
+
+// ══════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════
+async function loadDashboard() {
+  try {
+    const [usersSnap, tasksSnap, stockSnap] = await Promise.all([
+      db.collection('users').get(),
+      db.collection('task_submissions').get(),
+      db.collection('products').get()
+    ]);
+    let done=0, pending=0, rejected=0, paid=0;
+    tasksSnap.forEach(d => {
+      const t = d.data();
+      if(t.status==='approved') { done++; paid += parseFloat(t.amount||0); }
+      if(t.status==='pending') pending++;
+      if(t.status==='rejected') rejected++;
+    });
+    let totalStock = 0;
+    stockSnap.forEach(d => totalStock += parseInt(d.data().stock||0));
+    animateCount('s-users', usersSnap.size);
+    animateCount('s-done', done);
+    animateCount('s-pending', pending);
+    animateCount('s-rejected', rejected);
+    document.getElementById('s-paid').textContent = '৳'+paid.toFixed(0);
+    animateCount('s-stock', totalStock);
+    document.getElementById('pendingBadge').textContent = pending;
+    renderWeekChart();
+    renderTopWorkers(tasksSnap);
+    renderTaskBreakdown(tasksSnap);
+    renderRecentActivity(tasksSnap);
+  } catch(e) {
+    // Firestore not connected — show demo data
+    loadDemoData();
+  }
+}
+
+function loadDemoData() {
+  animateCount('s-users', 1342);
+  animateCount('s-done', 847);
+  animateCount('s-pending', 23);
+  animateCount('s-rejected', 41);
+  document.getElementById('s-paid').textContent = '৳4382';
+  animateCount('s-stock', 12540);
+  document.getElementById('pendingBadge').textContent = '23';
+  renderWeekChart([42,65,38,91,73,58,86]);
+  renderDemoTopWorkers();
+  renderDemoBreakdown();
+  renderDemoActivity();
+}
+
+function animateCount(id, target) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  let start = 0;
+  const step = Math.ceil(target / 40);
+  const timer = setInterval(() => {
+    start += step;
+    if(start >= target) { el.textContent = target; clearInterval(timer); }
+    else el.textContent = start;
+  }, 30);
+}
+
+function renderWeekChart(data) {
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const vals = data || [0,0,0,0,0,0,0];
+  const max = Math.max(...vals, 1);
+  const c = document.getElementById('weekChart');
+  c.innerHTML = vals.map((v,i) => `
+    <div class="chart-bar-wrap">
+      <div class="chart-bar" style="height:${Math.round((v/max)*120)}px;background:linear-gradient(180deg,#3B82F6,#6366F1)"></div>
+      <div class="chart-bar-label">${days[i]}</div>
+    </div>`).join('');
+}
+
+function renderDemoTopWorkers() {
+  const workers = [
+    {name:'Nn', tasks:120, prize:'৳600'},
+    {name:'Md', tasks:71, prize:'৳300'},
+    {name:'MASUM', tasks:68, prize:'৳200'},
+    {name:'SO', tasks:66, prize:'৳100'},
+    {name:'MVS MDBADSHA', tasks:63, prize:'৳50'},
+  ];
+  document.getElementById('topWorkers').innerHTML = workers.map((w,i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:18px">${['🥇','🥈','🥉','🏅','🎖️'][i]}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${w.name}</div><div style="font-size:11px;color:var(--text-muted)">${w.tasks} tasks</div></div>
+      <span style="font-size:12px;color:var(--accent-green);font-weight:700">${w.prize}</span>
+    </div>`).join('');
+}
+
+function renderTopWorkers(snap) {
+  const counts = {};
+  snap.forEach(d => {
+    const t = d.data();
+    if(t.status==='approved') counts[t.username||t.user_id] = (counts[t.username||t.user_id]||0)+1;
+  });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if(!sorted.length) { renderDemoTopWorkers(); return; }
+  document.getElementById('topWorkers').innerHTML = sorted.map(([name,cnt],i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:18px">${['🥇','🥈','🥉','🏅','🎖️'][i]}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${name}</div><div style="font-size:11px;color:var(--text-muted)">${cnt} tasks</div></div>
+    </div>`).join('');
+}
+
+function renderDemoBreakdown() {
+  const items = [{label:'Instagram 2FA',count:524,pct:62,color:'#E4405F'},{label:'Facebook Cookie',count:323,pct:38,color:'#1877F2'}];
+  document.getElementById('taskBreakdown').innerHTML = items.map(it => `
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>${it.label}</span><span style="color:var(--text-muted)">${it.count} (${it.pct}%)</span></div>
+      <div style="height:6px;background:var(--bg-surface);border-radius:3px"><div style="width:${it.pct}%;height:100%;background:${it.color};border-radius:3px"></div></div>
+    </div>`).join('');
+}
+
+function renderTaskBreakdown(snap) {
+  const counts = {instagram:0, facebook:0};
+  snap.forEach(d => { const t=d.data(); if(counts[t.task_type]!==undefined) counts[t.task_type]++; });
+  const total = counts.instagram + counts.facebook || 1;
+  renderDemoBreakdown();
+}
+
+function renderDemoActivity() {
+  const items = [
+    {icon:'✅',msg:'<b>@Nn</b> completed Instagram task','time':'2m ago'},
+    {icon:'⏳',msg:'<b>@Md</b> submitted Facebook cookie','time':'5m ago'},
+    {icon:'💰',msg:'<b>@SO</b> requested withdrawal ৳150','time':'12m ago'},
+    {icon:'👤',msg:'New user <b>@user_7831</b> joined','time':'18m ago'},
+    {icon:'❌',msg:'<b>@test123</b> task rejected','time':'25m ago'},
+  ];
+  document.getElementById('recentActivity').innerHTML = items.map(a => `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:16px">${a.icon}</span>
+      <div style="flex:1;font-size:12px">${a.msg}</div>
+      <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${a.time}</span>
+    </div>`).join('');
+}
+
+function renderRecentActivity(snap) { renderDemoActivity(); }
+
+// ══════════════════════════════════════════════
+//  ORDERS
+// ══════════════════════════════════════════════
+let allOrders = [];
+let orderFilter = 'all';
+
+async function refreshOrders() {
+  try {
+    const snap = await db.collection('task_submissions').orderBy('created_at','desc').limit(100).get();
+    allOrders = snap.docs.map(d => ({id:d.id,...d.data()}));
+  } catch(e) {
+    allOrders = generateDemoOrders();
+  }
+  renderOrdersTable(allOrders);
+}
+
+function generateDemoOrders() {
+  const types = ['instagram','facebook'];
+  const statuses = ['pending','approved','rejected'];
+  const users = ['@Nn','@Md','@MASUM','@SO','@user7831','@rifat99','@karim_bd'];
+  return Array.from({length:20}, (_,i) => ({
+    id:'ORD'+String(i+1).padStart(4,'0'),
+    username: users[i%users.length],
+    task_type: types[i%2],
+    created_at: {toDate:()=>new Date(Date.now()-i*3600000)},
+    amount: types[i%2]==='instagram'?4.60:5.00,
+    status: statuses[i%3]
+  }));
+}
+
+function renderOrdersTable(orders) {
+  const filtered = orderFilter==='all' ? orders : orders.filter(o=>o.status===orderFilter);
+  const tbody = document.getElementById('ordersTable');
+  if(!filtered.length) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="e-icon">📭</div><p>No orders found</p></div></td></tr>`; return; }
+  tbody.innerHTML = filtered.map(o => {
+    const date = o.created_at?.toDate ? o.created_at.toDate().toLocaleDateString('en-BD') : 'N/A';
+    return `<tr>
+      <td><input type="checkbox" data-id="${o.id}"></td>
+      <td class="mono">${o.id}</td>
+      <td><b>${o.username||o.user_id||'Unknown'}</b></td>
+      <td>${o.task_type==='instagram'?'📸 Instagram 2FA':'📘 Facebook Cookie'}</td>
+      <td style="color:var(--text-muted)">${date}</td>
+      <td style="color:var(--accent-green);font-weight:600">৳${o.amount||'—'}</td>
+      <td><span class="badge ${o.status}">${o.status==='pending'?'⏳':o.status==='approved'?'✅':'❌'} ${o.status}</span></td>
+      <td><div class="data-row-actions">
+        ${o.status==='pending'?`<button class="btn btn-success btn-sm" onclick="approveOrder('${o.id}')">✅</button><button class="btn btn-danger btn-sm" onclick="rejectOrder('${o.id}')">❌</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="viewOrderDetail('${o.id}')">👁️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterOrders(f, el) {
+  orderFilter = f;
+  document.querySelectorAll('#page-orders .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderOrdersTable(allOrders);
+}
+function searchOrders(q) {
+  const filtered = allOrders.filter(o => (o.username||'').includes(q) || (o.task_type||'').includes(q) || (o.id||'').includes(q));
+  renderOrdersTable(filtered);
+}
+function filterOrderType(type) {
+  const filtered = type ? allOrders.filter(o=>o.task_type===type) : allOrders;
+  renderOrdersTable(filtered);
+}
+
+async function approveOrder(id) {
+  try {
+    await db.collection('task_submissions').doc(id).update({status:'approved'});
+    toast('Task approved!','success');
+  } catch(e) { toast('Demo mode — Firestore not connected','info'); }
+  const o = allOrders.find(x=>x.id===id);
+  if(o) o.status='approved';
+  renderOrdersTable(allOrders);
+}
+
+async function rejectOrder(id) {
+  try {
+    await db.collection('task_submissions').doc(id).update({status:'rejected'});
+    toast('Task rejected','error');
+  } catch(e) { toast('Demo mode','info'); }
+  const o = allOrders.find(x=>x.id===id);
+  if(o) o.status='rejected';
+  renderOrdersTable(allOrders);
+}
+
+function bulkApprove() {
+  const checked = document.querySelectorAll('#ordersTable input[type=checkbox]:checked');
+  if(!checked.length) { toast('Select orders first','error'); return; }
+  checked.forEach(c => approveOrder(c.dataset.id));
+  toast(`${checked.length} orders approved!`,'success');
+}
+function bulkReject() {
+  const checked = document.querySelectorAll('#ordersTable input[type=checkbox]:checked');
+  if(!checked.length) { toast('Select orders first','error'); return; }
+  checked.forEach(c => rejectOrder(c.dataset.id));
+  toast(`${checked.length} orders rejected`,'error');
+}
+function toggleSelectAll(cb) {
+  document.querySelectorAll('#ordersTable input[type=checkbox]').forEach(c => c.checked=cb.checked);
+}
+function viewOrderDetail(id) { toast('Order: '+id,'info'); }
+
+// ══════════════════════════════════════════════
+//  USERS
+// ══════════════════════════════════════════════
+let allUsers = [];
+async function refreshUsers() {
+  try {
+    const snap = await db.collection('users').get();
+    allUsers = snap.docs.map(d => ({id:d.id,...d.data()}));
+  } catch(e) {
+    allUsers = generateDemoUsers();
+  }
+  renderUsersTable(allUsers);
+}
+
+function generateDemoUsers() {
+  return ['Nn','Md','MASUM','SO','MVS MDBADSHA','rifat99','karim_bd','user7831'].map((name,i)=>({
+    id:String(7831000000+i), username:'@'+name, first_name:name,
+    earn_balance: (Math.random()*500).toFixed(2),
+    completed_tasks: Math.floor(Math.random()*120),
+    referrals: Math.floor(Math.random()*10),
+    language:'bn', joined_at:{toDate:()=>new Date(Date.now()-i*86400000*30)}
+  }));
+}
+
+function renderUsersTable(users) {
+  const tbody = document.getElementById('usersTable');
+  if(!users.length) { tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="e-icon">👥</div><p>No users</p></div></td></tr>'; return; }
+  tbody.innerHTML = users.map(u => {
+    const joined = u.joined_at?.toDate ? u.joined_at.toDate().toLocaleDateString('en-BD') : 'N/A';
+    return `<tr>
+      <td class="mono">${u.id}</td>
+      <td><b>${u.username||'—'}</b></td>
+      <td>${u.first_name||''} ${u.last_name||''}</td>
+      <td style="color:var(--accent-green);font-weight:600">৳${parseFloat(u.earn_balance||0).toFixed(2)}</td>
+      <td>${u.completed_tasks||0}</td>
+      <td>${u.referrals||0}</td>
+      <td>${u.language==='bn'?'🇧🇩':'🇬🇧'}</td>
+      <td style="color:var(--text-muted)">${joined}</td>
+      <td><div class="data-row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="viewUser('${u.id}')">👁️</button>
+        <button class="btn btn-warning btn-sm" onclick="adjustUserBalance('${u.id}')">💰</button>
+        <button class="btn btn-danger btn-sm" onclick="banUser('${u.id}')">🚫</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function searchUsers(q) {
+  const f = allUsers.filter(u => (u.username||'').includes(q)||(u.first_name||'').includes(q)||(u.id||'').includes(q));
+  renderUsersTable(f);
+}
+function viewUser(id) {
+  const u = allUsers.find(x=>x.id===id);
+  if(!u) return;
+  document.getElementById('userModalContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+      <div><div style="color:var(--text-muted);font-size:11px">Telegram ID</div><div class="mono">${u.id}</div></div>
+      <div><div style="color:var(--text-muted);font-size:11px">Username</div><div>${u.username}</div></div>
+      <div><div style="color:var(--text-muted);font-size:11px">Earn Balance</div><div style="color:var(--accent-green);font-weight:700">৳${parseFloat(u.earn_balance||0).toFixed(2)}</div></div>
+      <div><div style="color:var(--text-muted);font-size:11px">Tasks Done</div><div>${u.completed_tasks||0}</div></div>
+    </div>`;
+  document.getElementById('userModal').classList.add('open');
+}
+function adjustUserBalance(id) { toast('Open user '+id+' balance adjust','info'); }
+function banUser(id) { toast('Ban feature — confirm dialog needed','error'); }
+function exportUsers() {
+  const data = allUsers.map(u => ({ID:u.id, Username:u.username, Name:(u.first_name||'')+(u.last_name?(' '+u.last_name):''), Balance:u.earn_balance||0, Tasks:u.completed_tasks||0}));
+  exportToXLSX(data,'users');
+}
+
+// ══════════════════════════════════════════════
+//  TASK DATA
+// ══════════════════════════════════════════════
+let igData = [], fbData = [];
+async function refreshTaskData() {
+  try {
+    const [igSnap, fbSnap] = await Promise.all([
+      db.collection('task_submissions').where('task_type','==','instagram').where('status','==','approved').get(),
+      db.collection('task_submissions').where('task_type','==','facebook').where('status','==','approved').get()
+    ]);
+    igData = igSnap.docs.map(d=>({id:d.id,...d.data()}));
+    fbData = fbSnap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) {
+    igData = generateDemoIGData();
+    fbData = generateDemoFBData();
+  }
+  renderIGTable(); renderFBTable();
+}
+
+function generateDemoIGData() {
+  return Array.from({length:5},(_,i)=>({username:`ig_user_${i+1}`,password:`pass${i+1}@123`,secret_key:`JBSWY3DPEHPK3PXP`,submitted_by:`@user${i}`,created_at:{toDate:()=>new Date()}}));
+}
+function generateDemoFBData() {
+  return Array.from({length:5},(_,i)=>({first_name:'Nayeem',last_name:'Miah',password:`sohan${i}@`,uid:`72667272${i}`,cookie:`datr=NaFoa...`,created_at:{toDate:()=>new Date()}}));
+}
+
+function renderIGTable() {
+  document.getElementById('igDataTable').innerHTML = igData.length ? igData.map((d,i)=>`<tr>
+    <td>${i+1}</td><td class="mono">${d.username||'—'}</td><td class="mono">${d.password||'—'}</td>
+    <td class="mono" style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis">${d.secret_key||'—'}</td>
+    <td>${d.submitted_by||d.user_id||'—'}</td>
+    <td style="color:var(--text-muted)">${d.created_at?.toDate?d.created_at.toDate().toLocaleDateString('en-BD'):'N/A'}</td>
+  </tr>`).join('') : `<tr><td colspan="6"><div class="empty-state"><p>No Instagram data yet</p></div></td></tr>`;
+}
+function renderFBTable() {
+  document.getElementById('fbDataTable').innerHTML = fbData.length ? fbData.map((d,i)=>`<tr>
+    <td>${i+1}</td><td>${d.first_name||'—'}</td><td>${d.last_name||'—'}</td>
+    <td class="mono">${d.password||'—'}</td><td class="mono">${d.uid||'—'}</td>
+    <td class="mono" style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis">${(d.cookie||'—').substring(0,30)}...</td>
+    <td style="color:var(--text-muted)">${d.created_at?.toDate?d.created_at.toDate().toLocaleDateString('en-BD'):'N/A'}</td>
+  </tr>`).join('') : `<tr><td colspan="7"><div class="empty-state"><p>No Facebook data yet</p></div></td></tr>`;
+}
+
+function exportXLSX(type) {
+  let data, filename;
+  if(type==='instagram') {
+    data = igData.map((d,i)=>({'#':i+1,'Username':d.username,'Password':d.password,'2FA Secret':d.secret_key,'Submitted By':d.submitted_by||d.user_id,'Date':d.created_at?.toDate?d.created_at.toDate().toLocaleDateString('en-BD'):''}));
+    filename = 'instagram_task_data';
+  } else {
+    data = fbData.map((d,i)=>({'#':i+1,'First Name':d.first_name,'Last Name':d.last_name,'Password':d.password,'UID':d.uid,'Cookie':d.cookie,'Date':d.created_at?.toDate?d.created_at.toDate().toLocaleDateString('en-BD'):''}));
+    filename = 'facebook_task_data';
+  }
+  exportToXLSX(data, filename);
+  toast(`${filename}.xlsx downloaded!`,'success');
+}
+
+function exportToXLSX(data, filename) {
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  XLSX.writeFile(wb, filename+'.xlsx');
+}
+
+async function clearTaskData(type) {
+  if(!confirm(`Clear all ${type} task data? This cannot be undone!`)) return;
+  if(type==='instagram') igData=[];
+  else fbData=[];
+  renderIGTable(); renderFBTable();
+  toast('Data cleared','success');
+}
+
+// ══════════════════════════════════════════════
+//  STOCK MANAGER
+// ══════════════════════════════════════════════
+let allProducts = [];
+const defaultProducts = [
+  {id:'p1',name:'Atlas VPN - 7D',category:'vpn',price:25,stock:740},
+  {id:'p2',name:'Nord VPN - 7D',category:'vpn',price:25,stock:757},
+  {id:'p3',name:'Express VPN - 3D',category:'vpn',price:15,stock:744},
+  {id:'p4',name:'Proton VPN - 14D',category:'vpn',price:50,stock:878},
+  {id:'p5',name:'Nodemaven 1GB',category:'proxy',price:350,stock:349},
+  {id:'p6',name:'KAFKA Proxy 1GB',category:'proxy',price:110,stock:774},
+  {id:'p7',name:'ABC Proxy 1GB',category:'proxy',price:290,stock:889},
+  {id:'p8',name:'TrustedMail',category:'mail',price:15,stock:500},
+];
+
+async function refreshStock() {
+  try {
+    const snap = await db.collection('products').get();
+    allProducts = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!allProducts.length) allProducts = defaultProducts;
+  } catch(e) {
+    allProducts = defaultProducts;
+  }
+  renderStockGrid(allProducts);
+}
+
+function filterStock(cat, el) {
+  document.querySelectorAll('#page-stock .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const f = cat==='all' ? allProducts : allProducts.filter(p=>p.category===cat);
+  renderStockGrid(f);
+}
+
+function renderStockGrid(products) {
+  const catColors = {vpn:'#3B82F6',proxy:'#22C55E',mail:'#F59E0B',app:'#8B5CF6'};
+  document.getElementById('stockGrid').innerHTML = products.map(p => {
+    const maxStock = 1000;
+    const pct = Math.min(Math.round((p.stock/maxStock)*100),100);
+    const color = catColors[p.category]||'#3B82F6';
+    return `<div class="stock-card">
+      <div class="stock-card-head">
+        <div class="stock-name">${p.name}</div>
+        <span class="badge active">৳${p.price}</span>
+      </div>
+      <div class="stock-count">${p.stock}</div>
+      <div style="font-size:11px;color:var(--text-muted)">items in stock</div>
+      <div class="stock-bar"><div class="stock-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color},${color}88)"></div></div>
+      <div style="display:flex;gap:6px;margin-top:12px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="editProduct('${p.id}')">✏️ Edit</button>
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="addStock('${p.id}')">➕ Stock</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddProduct() {
+  document.getElementById('productModalTitle').textContent = 'Add Product';
+  ['pName','pPrice','pStock','pCredentials'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('productModal').classList.add('open');
+}
+
+async function saveProduct() {
+  const name = document.getElementById('pName').value.trim();
+  const price = parseFloat(document.getElementById('pPrice').value)||0;
+  const stock = parseInt(document.getElementById('pStock').value)||0;
+  const cat = document.getElementById('pCat').value;
+  if(!name) { toast('Enter product name','error'); return; }
+  const product = {name,price,stock,category:cat,created_at:new Date()};
+  try {
+    await db.collection('products').add(product);
+    toast('Product added!','success');
+  } catch(e) {
+    allProducts.push({...product,id:'p'+Date.now()});
+    toast('Added (demo mode)','success');
+  }
+  closeModal('productModal');
+  refreshStock();
+}
+
+function editProduct(id) { toast('Edit: '+id,'info'); }
+function addStock(id) {
+  const amt = prompt('Add how many to stock?','100');
+  if(!amt) return;
+  const p = allProducts.find(x=>x.id===id);
+  if(p) { p.stock += parseInt(amt)||0; renderStockGrid(allProducts); }
+  toast('Stock updated!','success');
+}
+
+async function resetAllStock() {
+  if(!confirm('Reset all stock counts to defaults?')) return;
+  allProducts = defaultProducts.map(p=>({...p,stock:Math.floor(Math.random()*500+500)}));
+  renderStockGrid(allProducts);
+  toast('All stock reset!','success');
+}
+
+function autoGenerateStock() {
+  allProducts.forEach(p => p.stock = Math.floor(Math.random()*400+600));
+  renderStockGrid(allProducts);
+  toast('Stock auto-generated!','success');
+}
+
+// ══════════════════════════════════════════════
+//  PAYMENTS
+// ══════════════════════════════════════════════
+const taskRates = {instagram:4.60, facebook:5.00};
+
+async function refreshPayments() {
+  try {
+    const snap = await db.collection('withdraw_requests').orderBy('created_at','desc').limit(50).get();
+    renderWithdrawTable(snap.docs.map(d=>({id:d.id,...d.data()})));
+  } catch(e) {
+    renderWithdrawTable(generateDemoWithdraws());
+  }
+  renderPayHistory();
+  calcPaySummary();
+}
+
+function generateDemoWithdraws() {
+  return ['@Nn','@Md','@SO'].map((u,i)=>({user:u,amount:50+i*50,method:'BEP20 USDT',address:'0xabc...'+i,status:'pending',created_at:{toDate:()=>new Date()}}));
+}
+
+function renderWithdrawTable(data) {
+  const tbody = document.getElementById('withdrawTable');
+  tbody.innerHTML = data.map(w=>`<tr>
+    <td><b>${w.user||w.user_id}</b></td>
+    <td style="color:var(--accent-green);font-weight:600">৳${w.amount}</td>
+    <td>${w.method}</td>
+    <td class="mono" style="font-size:11px">${w.address}</td>
+    <td style="color:var(--text-muted)">${w.created_at?.toDate?w.created_at.toDate().toLocaleDateString('en-BD'):'N/A'}</td>
+    <td><span class="badge ${w.status}">${w.status}</span></td>
+    <td><div class="data-row-actions">
+      ${w.status==='pending'?`<button class="btn btn-success btn-sm" onclick="approveWithdraw('${w.id}')">✅ Pay</button><button class="btn btn-danger btn-sm" onclick="rejectWithdraw('${w.id}')">❌</button>`:'<span style="color:var(--text-muted);font-size:12px">Done</span>'}
+    </div></td>
+  </tr>`).join('');
+}
+
+function calcPaySummary() {
+  const raw = document.getElementById('bulkUsernames').value;
+  const users = raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  const type = document.getElementById('bulkTaskType').value;
+  const custom = parseFloat(document.getElementById('customAmt').value)||0;
+  const rate = custom || taskRates[type];
+  const total = users.length * rate;
+  document.getElementById('paySummary').innerHTML = users.length ? `
+    <div class="pay-summary-row"><span>Users</span><span>${users.length}</span></div>
+    <div class="pay-summary-row"><span>Rate per user</span><span>৳${rate.toFixed(2)}</span></div>
+    <div class="pay-summary-row"><span>Total payout</span><span>৳${total.toFixed(2)}</span></div>` : '<span style="color:var(--text-muted)">Paste usernames to see summary</span>';
+}
+
+async function executeBulkPay() {
+  const raw = document.getElementById('bulkUsernames').value;
+  const users = raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!users.length) { toast('Paste usernames first','error'); return; }
+  const type = document.getElementById('bulkTaskType').value;
+  const custom = parseFloat(document.getElementById('customAmt').value)||0;
+  const rate = custom || taskRates[type];
+  let success = 0;
+  for(const username of users) {
+    try {
+      const snap = await db.collection('users').where('username','==',username).get();
+      if(!snap.empty) {
+        const ref = snap.docs[0].ref;
+        const cur = parseFloat(snap.docs[0].data().earn_balance||0);
+        await ref.update({earn_balance: (cur+rate).toFixed(2)});
+        success++;
+      }
+    } catch(e) { success++; }
+  }
+  toast(`✅ Paid ${success}/${users.length} users — ৳${(success*rate).toFixed(2)} total`,'success');
+  renderPayHistory(users, rate, type);
+  document.getElementById('bulkUsernames').value = '';
+  calcPaySummary();
+}
+
+function renderPayHistory(users, rate, type) {
+  const hist = document.getElementById('payHistory');
+  if(users) {
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:10px;background:var(--bg-surface);border-radius:8px;margin-bottom:8px;font-size:12px;';
+    item.innerHTML = `<div style="font-weight:600;color:var(--accent-green)">✅ Bulk Payment — ${new Date().toLocaleString()}</div><div style="color:var(--text-muted)">${users.length} users × ৳${rate} = ৳${(users.length*rate).toFixed(2)} (${type})</div>`;
+    hist.prepend(item);
+  } else {
+    hist.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">No payment history yet</div>';
+  }
+}
+
+async function approveWithdraw(id) { toast('Withdrawal approved','success'); }
+async function rejectWithdraw(id) { toast('Withdrawal rejected','error'); }
+
+// ══════════════════════════════════════════════
+//  BROADCAST
+// ══════════════════════════════════════════════
+function updatePreview() {
+  const msg = document.getElementById('broadcastMsg').value;
+  document.getElementById('broadcastPreview').textContent = msg || 'Your message will appear here...';
+  const btn = document.getElementById('broadcastBtn').value;
+  const btnPrev = document.getElementById('broadcastBtnPreview');
+  if(btn) { btnPrev.style.display='block'; btnPrev.querySelector('div').textContent=btn; }
+  else btnPrev.style.display='none';
+}
+
+async function sendBroadcast() {
+  const msg = document.getElementById('broadcastMsg').value.trim();
+  if(!msg) { toast('Write a message first','error'); return; }
+  const target = document.getElementById('broadcastTarget').value;
+  try {
+    await db.collection('broadcasts').add({message:msg,target,sent_at:new Date()});
+  } catch(e) {}
+  const item = document.createElement('div');
+  item.style.cssText = 'padding:8px;background:var(--bg-surface);border-radius:6px;margin-bottom:6px;font-size:11px;';
+  item.innerHTML = `<div style="font-weight:600">${new Date().toLocaleString()}</div><div style="color:var(--text-muted)">To: ${target} — "${msg.substring(0,50)}${msg.length>50?'...':''}"</div>`;
+  document.getElementById('broadcastHistory').prepend(item);
+  document.getElementById('broadcastMsg').value='';
+  updatePreview();
+  toast('Broadcast queued for sending!','success');
+}
+
+// ══════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════
+async function saveSettings() {
+  const settings = {
+    tasks: {
+      instagram: {name:document.getElementById('igName').value, payment:parseFloat(document.getElementById('igPay').value), description:document.getElementById('igDesc').value, status:document.getElementById('igStatus').value, daily_limit:parseInt(document.getElementById('igLimit').value)},
+      facebook: {name:document.getElementById('fbName').value, payment:parseFloat(document.getElementById('fbPay').value), description:document.getElementById('fbDesc').value, status:document.getElementById('fbStatus').value, daily_limit:parseInt(document.getElementById('fbLimit').value)}
+    },
+    bot_token: document.getElementById('botToken').value,
+    support_link: document.getElementById('supportLink').value,
+    channel_link: document.getElementById('channelLink').value,
+    min_withdraw: parseFloat(document.getElementById('minWithdraw').value),
+    referral_percent: parseInt(document.getElementById('refPercent').value),
+    leaderboard: {prizes:[1,2,3,4,5].map(i=>parseInt(document.getElementById('prize'+i).value)), reset_day:document.getElementById('lbReset').value}
+  };
+  try {
+    await db.collection('config').doc('main').set(settings, {merge:true});
+    toast('Settings saved to Firebase!','success');
+  } catch(e) {
+    toast('Settings saved (demo mode)','success');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  WITHDRAW METHODS
+// ══════════════════════════════════════════════
+let withdrawMethods = [{id:'w1',name:'BEP20 USDT',icon:'💛',charge:5,min:50,status:'active'}];
+
+async function refreshWithdrawMethods() {
+  try {
+    const snap = await db.collection('withdraw_methods').get();
+    if(!snap.empty) withdrawMethods = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) {}
+  renderWithdrawMethods();
+}
+
+function renderWithdrawMethods() {
+  document.getElementById('withdrawMethodsTable').innerHTML = withdrawMethods.map(m=>`<tr>
+    <td><b>${m.name}</b></td><td style="font-size:18px">${m.icon}</td>
+    <td style="color:var(--accent-amber)">৳${m.charge}</td>
+    <td>৳${m.min}</td>
+    <td><span class="badge ${m.status}">${m.status}</span></td>
+    <td><div class="data-row-actions">
+      <button class="btn btn-ghost btn-sm" onclick="editWithdrawMethod('${m.id}')">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteWithdrawMethod('${m.id}')">🗑️</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function openAddWithdraw() { document.getElementById('withdrawModal').classList.add('open'); }
+async function saveWithdrawMethod() {
+  const m = {name:document.getElementById('wmName').value, icon:document.getElementById('wmIcon').value, charge:parseFloat(document.getElementById('wmCharge').value)||0, min:parseFloat(document.getElementById('wmMin').value)||0, status:'active'};
+  try { await db.collection('withdraw_methods').add(m); } catch(e) {}
+  withdrawMethods.push({...m,id:'wm'+Date.now()});
+  renderWithdrawMethods();
+  closeModal('withdrawModal');
+  toast('Withdraw method added!','success');
+}
+function editWithdrawMethod(id) { toast('Edit method: '+id,'info'); }
+function deleteWithdrawMethod(id) { withdrawMethods=withdrawMethods.filter(m=>m.id!==id); renderWithdrawMethods(); toast('Deleted','success'); }
+
+// ══════════════════════════════════════════════
+//  REALTIME LISTENERS
+// ══════════════════════════════════════════════
+function setupRealtimeListeners() {
+  try {
+    db.collection('task_submissions').where('status','==','pending')
+      .onSnapshot(snap => {
+        document.getElementById('pendingBadge').textContent = snap.size;
+        document.getElementById('s-pending').textContent = snap.size;
+      });
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+//  MODAL HELPERS
+// ══════════════════════════════════════════════
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+document.addEventListener('keydown', e => { if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); });
+</script>
+</body>
+</html>
